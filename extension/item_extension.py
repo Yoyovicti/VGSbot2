@@ -663,6 +663,7 @@ class ItemExtension(interactions.Extension):
 
             choice = choices[KEYCAP_NUMBERS.index(selected_reaction)]
 
+            # Gold Cadoizo
             if is_gold:
                 contents = roll_manager.gold_cadoizo[choice]
                 result_message = (f"*Lot obtenu :* {choice}\n"
@@ -679,11 +680,17 @@ class ItemExtension(interactions.Extension):
                         should_save = True
                         continue
 
-                    # TODO process instant items for gold cadoizo
-                    continue
+                    # TODO process carapace + eclair for gold cadoizo
 
                 await cadoizo_message.reply(contents_message + result_message)
                 await ctx.send(result_message)
+
+                # Process instant Cadoizo in kit:
+                for elem in contents:
+                    if elem["item"] == "cadoizo":
+                        should_save = True
+                        await self.run_cadoizo(ctx, elem["qty"], elem["gold"] == 1, cancel_option=False, enable_save=False)
+                        continue
                 continue
 
             # Add item to inventory
