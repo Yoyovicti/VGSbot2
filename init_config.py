@@ -1,6 +1,7 @@
 import os
 
 from item_manager import ItemManager
+from gimmick_manager import GimmickManager
 from roll_manager import RollManager
 from team_manager import TeamManager
 
@@ -32,7 +33,8 @@ with open(BOO_NAMES_PATH, "r") as boo_names_file:
 
 # Load Managers (Items, Teams, Roll)
 item_manager = ItemManager(VGS_FOLDER)
-team_manager = TeamManager(VGS_FOLDER, TEAM_FOLDER, item_manager.items)
+gimmick_manager = GimmickManager(VGS_FOLDER)
+team_manager = TeamManager(VGS_FOLDER, TEAM_FOLDER, item_manager.items, gimmick_manager.gimmicks)
 roll_manager = RollManager(VGS_FOLDER)
 
 
