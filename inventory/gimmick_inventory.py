@@ -90,10 +90,28 @@ class GimmickInventory(Inventory):
             return
 
         if team_name not in self.seen:
-            self.seen[team_name] = [gimmick]
-            return
-
+            self.seen[team_name] = []
         self.seen[team_name].append(gimmick)
+
+    def is_found(self, region: str) -> bool:
+        return self.contents[region]["found"] != "-"
+
+    def get_valid_clairvoyance_gimmicks(self, seen_gimmicks: List[Gimmick]) -> List[Gimmick]:
+        valid_gimmicks = []
+        for region in self.contents:
+            skip = False
+            if self.is_found(region):
+                continue
+            for gimmick in seen_gimmicks:
+                if gimmick.region == region:
+                    skip = True
+                    break
+            if skip:
+                continue
+
+            valid_gimmicks.append(self.gimmicks[region])
+        return valid_gimmicks
+
 
     def add_see_count(self, region: str, qty: int = 1):
         self.contents[region]["seen"] += qty

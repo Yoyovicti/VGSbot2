@@ -31,6 +31,8 @@ with open(BOO_NAMES_PATH, "r") as boo_names_file:
     for boo_name in boo_names_file:
         BOO_NAMES.append(boo_name.rstrip())
 
+ORBE_SUCCESS_RATE = 0.5
+
 # Load Managers (Items, Teams, Roll)
 item_manager = ItemManager(VGS_FOLDER)
 gimmick_manager = GimmickManager(VGS_FOLDER)

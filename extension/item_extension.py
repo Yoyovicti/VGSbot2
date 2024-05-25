@@ -1,11 +1,10 @@
 import interactions
 
-from boo import Boo
-from cadoizo import Cadoizo
 from champi import Champi
+from commands.classic_item_command import ClassicItemCommand
+from commands.usable_item_command import UsableItemCommand
 from init_config import GUILD_IDS, item_manager, team_manager, TEAM_FOLDER, roll_manager
-from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, CROSS_MARK, KEYCAP_NUMBERS
-from orbe import Orbe
+from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N
 from reaction_manager import ReactionManager
 from roll import Roll
 
@@ -86,25 +85,12 @@ class ItemExtension(interactions.Extension):
         min_value=1
     )
 
-    # TEAM_OPTION = interactions.SlashCommandOption(
-    #     name="cible",
-    #     description="L'équipe visée",
-    #     type=interactions.OptionType.STRING,
-    #     required=True,
-    #     argument_name="target",
-    #     choices=[
-    #         interactions.SlashCommandChoice(name=team_manager.teams[team].name, value=team)
-    #         for team in team_manager.teams
-    #     ]
-    # )
-
     def __init__(self, bot: interactions.Client):
         self.add_ext_auto_defer()
 
         self.team = None
         self.item_inventory = None
         self.item_channel = None
-        self.team_list = []
 
     def init_team_info(self):
         self.team = None
@@ -148,26 +134,9 @@ class ItemExtension(interactions.Extension):
     )
     async def add_item_command(self, ctx: interactions.SlashContext, item: str, qty: int = 1, gold: str = "non",
                                stealable: str = "oui"):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        # Add item and save to memory
-        is_gold = gold == "oui"
-        is_safe = stealable == "non"
-        self.item_inventory.add(item, qty, is_gold, is_safe)
-        self.item_inventory.save(TEAM_FOLDER, self.team.id)
-
-        # Edit inventory message and send to item channel
-        inv_msg = await self.item_channel.fetch_message(self.item_inventory.message_id)
-        await inv_msg.edit(content=self.item_inventory.format_discord(self.team.name))
-        message = f"{item_manager.items[item].get_emoji(is_gold)} x{qty}"
-        if is_safe:
-            message += " (non volable)"
-        await self.item_channel.send(message + " ajouté à l'inventaire !")
-
-        # Confirmation message
-        await ctx.send("Inventaire mis à jour !")
+        command = ClassicItemCommand(self.bot, ctx, item, param="add", qty=qty, gold=(gold == "oui"),
+                                     safe=(stealable == "non"))
+        await command.run()
 
     @interactions.slash_command(
         name="objet",
@@ -186,11 +155,9 @@ class ItemExtension(interactions.Extension):
     )
     async def remove_item_command(self, ctx: interactions.SlashContext, item: str, qty: int = 1, gold: str = "non",
                                   stealable: str = "oui"):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        await self.run_remove(ctx, item, qty, gold == "oui", stealable == "non")
+        command = ClassicItemCommand(self.bot, ctx, item, param="remove", qty=qty, gold=(gold == "oui"),
+                                     safe=(stealable == "non"))
+        await command.run()
 
     @interactions.slash_command(
         name="tirage",
@@ -269,11 +236,9 @@ class ItemExtension(interactions.Extension):
     )
     async def maxitomate_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                                  stealable: str = "oui"):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        await self.run_remove(ctx, "maxitomate", qty, gold == "oui", stealable == "non")
+        command = ClassicItemCommand(self.bot, ctx, "maxitomate", param="remove", qty=qty, gold=(gold == "oui"),
+                                     safe=(stealable == "non"))
+        await command.run()
 
     @interactions.slash_command(
         name="ruche",
@@ -289,11 +254,9 @@ class ItemExtension(interactions.Extension):
     )
     async def ruche_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                             stealable: str = "oui"):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        await self.run_remove(ctx, "ruche", qty, gold == "oui", stealable == "non")
+        command = ClassicItemCommand(self.bot, ctx, "ruche", param="remove", qty=qty, gold=(gold == "oui"),
+                                     safe=(stealable == "non"))
+        await command.run()
 
     @interactions.slash_command(
         name="grappin",
@@ -309,11 +272,9 @@ class ItemExtension(interactions.Extension):
     )
     async def grappin_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                               stealable: str = "oui"):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        await self.run_remove(ctx, "grappin", qty, gold == "oui", stealable == "non")
+        command = ClassicItemCommand(self.bot, ctx, "grappin", param="remove", qty=qty, gold=(gold == "oui"),
+                                     safe=(stealable == "non"))
+        await command.run()
 
     @interactions.slash_command(
         name="fulgurorbe",
@@ -329,26 +290,9 @@ class ItemExtension(interactions.Extension):
     )
     async def orbe_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                            stealable: str = "oui"):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        # Remove item from inventory
-        is_gold = gold == "oui"
-        item = "fulgurorbe"
-        success = await self.run_remove(ctx, item, qty, is_gold, stealable == "non", True)
-        if not success:
-            return
-        await ctx.send("Inventaire mis à jour !")
-
-        # Use item
-        for _ in range(qty):
-            orbe = Orbe(is_gold)
-            if not orbe.success():
-                await self.item_channel.send(f"{item_manager.items[item].get_emoji(is_gold)} a manqué sa cible et "
-                                             f"s'est évaporée...")
-                continue
-            await self.item_channel.send(f"{item_manager.items[item].get_emoji(is_gold)} lancée avec succès !")
+        command = UsableItemCommand(self.bot, ctx, param="fulgurorbe", qty=qty, gold=(gold == "oui"),
+                                    safe=(stealable == "non"))
+        await command.run()
 
     @interactions.slash_command(
         name="etoile",
@@ -364,152 +308,27 @@ class ItemExtension(interactions.Extension):
     )
     async def etoile_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                              stealable: str = "oui"):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        await self.run_remove(ctx, "etoile", qty, gold == "oui", stealable == "non")
+        command = ClassicItemCommand(self.bot, ctx, "etoile", param="remove", qty=qty, gold=(gold == "oui"),
+                                     safe=(stealable == "non"))
+        await command.run()
 
     @interactions.slash_command(
         name="boo",
         description="Utilise un Boo",
         scopes=GUILD_IDS,
         options=[
-            SAFE_OPTION,
-            GOLD_OPTION
+            QTY_OPTION,
+            GOLD_OPTION,
+            SAFE_OPTION
         ],
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False
     )
-    async def boo_command(self, ctx: interactions.SlashContext, stealable: str = "oui", gold: str = "non"):
-        # Load origin team info
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        is_gold = gold == "oui"
-        is_safe = stealable == "non"
-        cancel_message = "Opération annulée."
-
-        # Load team names
-        valid_teams = [team for team in team_manager.teams if team != self.team.id]
-        n_runs = len(valid_teams) if is_gold else 1
-
-        while n_runs > 0:
-            item_emojis = await self.get_valid_boo_target_items()
-            item_select_string = "Veuillez sélectionner l'objet que vous désirez voler :"
-            item_select_message = await self.item_channel.send(item_select_string)
-            item_reaction_manager = ReactionManager(item_select_message, [CROSS_MARK] + item_emojis)
-            target_item = await item_reaction_manager.run()
-
-            if target_item == CROSS_MARK:
-                await item_select_message.reply(cancel_message)
-                await ctx.send(cancel_message)
-                if is_gold: continue
-                return
-
-            team_select_string = "Veuillez sélectionner l'équipe visée:\n\n"
-            for i in range(n_runs):
-                team_select_string += f"{KEYCAP_NUMBERS[i]} {team_manager.teams[valid_teams[i]].name}\n"
-            team_select_message = await self.item_channel.send(team_select_string)
-            team_reaction_manager = ReactionManager(team_select_message, [CROSS_MARK] + KEYCAP_NUMBERS[:n_runs])
-            selected_reaction = await team_reaction_manager.run()
-
-            if selected_reaction == CROSS_MARK:
-                await team_select_message.reply(cancel_message)
-                await ctx.send(cancel_message)
-                if is_gold: continue
-                return
-
-            target_team = valid_teams[KEYCAP_NUMBERS.index(selected_reaction)]
-            valid_teams.remove(target_team)
-            n_runs -= 1
-
-            # Check target inventory
-            target_team = team_manager.teams[target_team]
-            target_inventory = target_team.inventory_manager.item_inventory
-            if not target_inventory.initialized:
-                await team_select_message.reply(cancel_message)
-                await ctx.send("Erreur: L'inventaire de la cible n'est pas initialisé.")
-                continue
-
-            # Check target item channel
-            target_item_channel = await self.bot.fetch_channel(target_team.item_channel_id)
-            if target_item_channel is None:
-                await team_select_message.reply(cancel_message)
-                await ctx.send("Erreur: Salon objets non trouvé pour la cible.")
-                continue
-
-            # All checks passed: remove boo from inventory
-            if n_runs <= 0:
-                success = await self.run_remove(ctx, "boo", 1, is_gold, is_safe, True)
-                if not success:
-                    return
-
-            # Process boo
-            boo = Boo(is_gold)
-
-            # Set default item to clone
-            sent_item = "clone"
-            if target_inventory.quantity(sent_item) <= 0:
-                if target_inventory.quantity(target_item) <= 0:
-                    origin_msg = f"{boo.name} : *J'ai rien trouvé chef !*"
-                    target_msg = (
-                        f"{boo.name} : *Je passais chercher* {item_manager.items[target_item].get_emoji()} *par ici, mais "
-                        f"il semblerait qu'il n'y ait rien. Bon ben je m'en vais snif...*")
-                    await self.item_channel.send(origin_msg)
-                    await target_item_channel.send(target_msg)
-
-                    # Confirmation message
-                    await ctx.send(f"{item_manager.items['boo'].get_emoji(is_gold)} Aucune modification effectuée !")
-                    continue
-
-                # Boo successful: set item to send
-                sent_item = target_item
-
-            # Process inventory
-            qty_stolen = 1
-            if is_gold:
-                qty_stolen = target_inventory.quantity(sent_item)
-
-            self.item_inventory.add(sent_item, qty_stolen)
-            target_inventory.remove(sent_item, qty_stolen)
-
-            # Save inventory
-            self.item_inventory.save(TEAM_FOLDER, self.team.id)
-            target_inventory.save(TEAM_FOLDER, target_team.id)
-
-            # Edit inventory messages and send to item channel
-            origin_inv_msg = await self.item_channel.fetch_message(self.item_inventory.message_id)
-            target_inv_msg = await target_item_channel.fetch_message(target_inventory.message_id)
-            await origin_inv_msg.edit(content=self.item_inventory.format_discord(self.team.name))
-            await target_inv_msg.edit(content=target_inventory.format_discord(target_team.name))
-            origin_msg = f"{boo.name} : *Je reviens avec *{item_manager.items[sent_item].get_emoji()} *!*"
-            target_msg = (f"{boo.name} : *Coucou, j'ai vu que vous m'aviez laissé* "
-                          f"{item_manager.items[sent_item].get_emoji()} *, c'est vraiment gentil de votre part ! Allez "
-                          f"bisous les nuls héhéhé...*")
-            await self.item_channel.send(origin_msg)
-            await target_item_channel.send(target_msg)
-
-            # Confirmation message
-            await ctx.send(f"{item_manager.items['boo'].get_emoji(is_gold)} Inventaires mis à jour !")
-
-    async def get_valid_boo_target_items(self):
-        # Get item emojis with corresponding reference to name
-        items = item_manager.items
-        item_emojis = []
-        for item in items:
-            if not items[item].stealable:
-                continue
-
-            classic_qty = self.item_inventory.quantity(item)
-            safe_qty = self.item_inventory.quantity(item, safe=True)
-            max_capacity = item_manager.items[item].max_capacity
-            if -1 < max_capacity <= classic_qty + safe_qty:
-                continue
-
-            item_emojis.append(items[item].get_emoji())
-        return item_emojis
+    async def boo_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
+                          stealable: str = "oui"):
+        command = UsableItemCommand(self.bot, ctx, param="boo", qty=qty, gold=(gold == "oui"),
+                                    safe=(stealable == "non"))
+        await command.run()
 
     @interactions.slash_command(
         name="picvenin",
@@ -525,11 +344,9 @@ class ItemExtension(interactions.Extension):
     )
     async def picvenin_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                                stealable: str = "oui"):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        await self.run_remove(ctx, "picvenin", qty, gold == "oui", stealable == "non")
+        command = ClassicItemCommand(self.bot, ctx, "picvenin", param="remove", qty=qty, gold=(gold == "oui"),
+                                     safe=(stealable == "non"))
+        await command.run()
 
     @interactions.slash_command(
         name="clairvoyance",
@@ -545,13 +362,9 @@ class ItemExtension(interactions.Extension):
     )
     async def clairvoyance_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                                    stealable: str = "oui"):
-        # TODO reveal gimmick to the origin team
-
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        await self.run_remove(ctx, "clairvoyance", qty, gold == "oui", stealable == "non")
+        command = UsableItemCommand(self.bot, ctx, param="clairvoyance", qty=qty, gold=(gold == "oui"),
+                                    safe=(stealable == "non"))
+        await command.run()
 
     @interactions.slash_command(
         name="klaxon",
@@ -567,11 +380,9 @@ class ItemExtension(interactions.Extension):
     )
     async def klaxon_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                              stealable: str = "oui"):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        await self.run_remove(ctx, "klaxon", qty, gold == "oui", stealable == "non")
+        command = ClassicItemCommand(self.bot, ctx, "klaxon", param="remove", qty=qty, gold=(gold == "oui"),
+                                     safe=(stealable == "non"))
+        await command.run()
 
     @interactions.slash_command(
         name="ar",
@@ -588,11 +399,9 @@ class ItemExtension(interactions.Extension):
     async def ar_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                          stealable: str = "oui"):
         # TODO ask for which gold item to use
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        await self.run_remove(ctx, "ar", qty, gold == "oui", stealable == "non")
+        command = ClassicItemCommand(self.bot, ctx, "ar", param="remove", qty=qty, gold=(gold == "oui"),
+                                     safe=(stealable == "non"))
+        await command.run()
 
     @interactions.slash_command(
         name="cadoizo",
@@ -606,110 +415,8 @@ class ItemExtension(interactions.Extension):
         dm_permission=False
     )
     async def cadoizo_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non"):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        await self.run_cadoizo(ctx, qty, gold == "oui", False)
-
-    async def run_cadoizo(self, ctx: interactions.SlashContext, qty: int = 1, is_gold: bool = False,
-                          cancel_option: bool = True, enable_save: bool = True):
-        cancel_message = "*Tirage annulé*"
-        should_save = False
-
-        for _ in range(qty):
-            n_items = 5 if is_gold else 3
-            cadoizo = Cadoizo(self.item_inventory, n_items, is_gold)
-            choices = cadoizo.run()
-
-            contents_message = f"*Le* {item_manager.items['cadoizo'].get_emoji(is_gold)} *contient :* "
-            for i in range(n_items):
-                if is_gold:
-                    contents_message += f"\n{KEYCAP_NUMBERS[i]} {choices[i]}"
-                    continue
-                contents_message += f"{item_manager.items[choices[i]].get_emoji()} "
-            contents_message += "\n"
-            await ctx.send(contents_message + "*En attente du choix des participants...*")
-
-            cadoizo_message = await self.item_channel.send(
-                f"{item_manager.items['cadoizo'].get_emoji(is_gold)} "
-                f"*Choisissez un lot avec les réactions ci-dessous :*"
-            )
-            reaction_choices = KEYCAP_NUMBERS[:n_items]
-            if cancel_option:
-                reaction_choices = [CROSS_MARK] + reaction_choices
-            if not is_gold and self.item_inventory.quantity("ar") + self.item_inventory.quantity("ar", safe=True) + self.item_inventory.quantity("ar", gold=True) > 0:
-                reaction_choices += [f"{item_manager.items['cadoizo'].get_emoji(True)}"]
-
-            reaction_manager = ReactionManager(cadoizo_message, reaction_choices)
-            selected_reaction = await reaction_manager.run()
-
-            if selected_reaction == CROSS_MARK:
-                await cadoizo_message.reply(contents_message + cancel_message)
-                await ctx.send(cancel_message)
-                continue
-
-            if selected_reaction == "goldcadoizo":
-                if self.item_inventory.quantity("ar") > 0:
-                    self.item_inventory.remove("ar")
-                elif self.item_inventory.quantity("ar", safe=True):
-                    self.item_inventory.remove("ar", safe=True)
-                else:
-                    self.item_inventory.remove("ar", gold=True)
-                should_save = True
-
-                await self.run_cadoizo(ctx, is_gold=True, cancel_option=False, enable_save=False)
-                continue
-
-            choice = choices[KEYCAP_NUMBERS.index(selected_reaction)]
-
-            # Gold Cadoizo
-            if is_gold:
-                contents = roll_manager.gold_cadoizo[choice]
-                result_message = (f"*Lot obtenu :* {choice}\n"
-                                  f"*Objet(s) obtenus :*\n")
-
-                for elem in contents:
-                    elem_item = elem["item"]
-                    elem_qty = elem["qty"]
-                    elem_is_gold = elem["gold"] == 1
-
-                    result_message += f"{item_manager.items[elem_item].get_emoji(elem_is_gold)} x{elem_qty}\n"
-                    if elem_is_gold or not item_manager.items[elem_item].instant:
-                        self.item_inventory.add(elem_item, qty=elem_qty, gold=elem_is_gold)
-                        should_save = True
-                        continue
-
-                    # TODO process carapace + eclair for gold cadoizo
-
-                await cadoizo_message.reply(contents_message + result_message)
-                await ctx.send(result_message)
-
-                # Process instant Cadoizo in kit:
-                for elem in contents:
-                    if elem["item"] == "cadoizo":
-                        should_save = True
-                        await self.run_cadoizo(ctx, elem["qty"], elem["gold"] == 1, cancel_option=False, enable_save=False)
-                        continue
-                continue
-
-            # Add item to inventory
-            if not item_manager.items[choice].instant:
-                self.item_inventory.add(choice)
-                should_save = True
-
-            # Send result message
-            result_message = f"*Objet obtenu :* {item_manager.items[choice].get_emoji()}"
-            await cadoizo_message.reply(contents_message + result_message)
-            await ctx.send(result_message)
-
-        # Save inventory
-        if enable_save and should_save:
-            self.item_inventory.save(TEAM_FOLDER, self.team.id)
-
-        # Edit inventory message and send to item channel
-        inv_msg = await self.item_channel.fetch_message(self.item_inventory.message_id)
-        await inv_msg.edit(content=self.item_inventory.format_discord(self.team.name))
+        command = UsableItemCommand(self.bot, ctx, param="cadoizo", qty=qty, gold=(gold == "oui"))
+        await command.run()
 
     @interactions.slash_command(
         name="champi",
@@ -722,23 +429,8 @@ class ItemExtension(interactions.Extension):
         dm_permission=False
     )
     async def champi_command(self, ctx: interactions.SlashContext, qty: int = 1):
-        self.init_team_info()
-
-        self.team = team_manager.get_team(str(ctx.channel_id))
-        if self.team is None:
-            await ctx.send("Erreur: Équipe non trouvée. Assurez-vous d'utiliser la commande dans le bon channel.")
-            return
-
-        valid_teams = [team for team in team_manager.teams if team != self.team.id]
-
-        for _ in range(qty):
-            champi = Champi(valid_teams)
-            target_team = champi.run()
-
-            item = "champinocif"
-            message = (f"{item_manager.items[item].get_emoji()} *Les points du shiny s'en vont vers l'équipe "
-                       f"**{team_manager.teams[target_team].name}***")
-            await ctx.send(message)
+        command = UsableItemCommand(self.bot, ctx, param="champi", qty=qty)
+        await command.run()
 
     @interactions.slash_command(
         name="paopou",
@@ -754,11 +446,9 @@ class ItemExtension(interactions.Extension):
     )
     async def paopou_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                              stealable: str = "oui"):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        await self.run_remove(ctx, "paopou", qty, gold == "oui", stealable == "non")
+        command = ClassicItemCommand(self.bot, ctx, "paopou", param="remove", qty=qty, gold=(gold == "oui"),
+                                     safe=(stealable == "non"))
+        await command.run()
 
     @interactions.slash_command(
         name="d6",
@@ -774,12 +464,10 @@ class ItemExtension(interactions.Extension):
     )
     async def d6_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                          stealable: str = "oui"):
-        # TODO do something more ?
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        await self.run_remove(ctx, "d6", qty, gold == "oui", stealable == "non")
+        # TODO Commands to edit gimmicks manually
+        command = ClassicItemCommand(self.bot, ctx, "d6", param="remove", qty=qty, gold=(gold == "oui"),
+                                     safe=(stealable == "non"))
+        await command.run()
 
     async def run_remove(self, ctx: interactions.SlashContext, item: str, qty: int = 1, is_gold: bool = False,
                          is_safe: bool = False, silent: bool = False) -> bool:
