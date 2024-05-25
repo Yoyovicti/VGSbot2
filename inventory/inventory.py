@@ -15,5 +15,5 @@ class Inventory:
     def save(self, base_path: str, team_name: str):
         raise NotImplementedError
 
-    def format_discord(self, team_name: str):
+    def format_discord(self, team_name: str) -> str:
         raise NotImplementedError

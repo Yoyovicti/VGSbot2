@@ -88,7 +88,7 @@ class ItemInventory(Inventory):
             item, classic, safe, gold = line.split()
             self.contents[item] = [int(classic), int(safe), int(gold)]
 
-    def format_discord(self, team_name: str):
+    def format_discord(self, team_name: str) -> str:
         string = f"__**Inventaire de l'équipe {team_name} :**__\n"
         safe_string, gold_string = "", ""
 

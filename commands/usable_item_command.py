@@ -234,8 +234,6 @@ class UsableItemCommand(ItemCommand):
         return item_emojis
 
     async def run_clairvoyance_command(self):
-        # TODO gold, qty
-        # TODO reveal gimmick to the origin team
         success = await self.load_team_info()
         if not success:
             return

@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict
+from typing import Dict, List
 
 import save_manager
 from gimmick import Gimmick
@@ -35,6 +35,7 @@ class GimmickInventory(Inventory):
         self.initialized = False
 
     def clear(self):
+        # TODO Clear seen gimmicks should update the counter for other teams
         self.seen = {}
         self.contents = {
             region: {
@@ -146,6 +147,7 @@ class GimmickInventory(Inventory):
         self.contents = json_data["contents"]
 
     def format_discord(self, team_name: str) -> str:
+        # TODO Add emojis, fix comma in gimmicks seen
         string = f"__**Gimmicks de l'équipe {team_name} :**__\n"
         string_seen = f"__**Gimmicks observés :**__\n"
 
