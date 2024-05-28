@@ -279,6 +279,7 @@ class UsableItemCommand(ItemCommand):
         await self.ctx.send(f"{item_manager.items['clairvoyance'].get_emoji(self.gold)} Inventaires mis à jour !")
 
     async def run_clairvoyance(self, gimmick_inv: GimmickInventory):
+        # TODO Edit allow to use Clairvoyance on its own team
         # Load valid teams
         valid_teams = self.get_valid_clairvoyance_teams(gimmick_inv.seen)
 
@@ -336,7 +337,7 @@ class UsableItemCommand(ItemCommand):
             for region in target_inv.contents:
                 if target_inv.is_found(region):
                     continue
-                if gimmick_inv.get_seen(target_team.name, region):
+                if gimmick_inv.is_seen(target_team.name, region):
                     continue
                 valid_regions.append(region)
 

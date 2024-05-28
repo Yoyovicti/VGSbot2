@@ -25,7 +25,7 @@ class TeamManager:
                 item_inventory = ItemInventory(items)
                 item_inventory.load(team_path, team_id)
 
-                gimmick_inventory = GimmickInventory(gimmicks[team_id])
+                gimmick_inventory = GimmickInventory(gimmicks[team_id], items)
                 gimmick_inventory.load(team_path, team_id)
 
                 inv_manager = InventoryManager(

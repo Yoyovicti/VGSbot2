@@ -4,14 +4,18 @@ from typing import Dict, List
 
 import save_manager
 from gimmick import Gimmick
+from init_emoji import WHITE_CHECK_MARK, CROSS_MARK
 from inventory.inventory import Inventory
+from item import Item
 
 
 class GimmickInventory(Inventory):
-    def __init__(self, gimmicks: Dict[str, Gimmick]):
+    def __init__(self, gimmicks: Dict[str, Gimmick], items: Dict[str, Item]):
         super().__init__()
         self.gimmicks = gimmicks
+        self.clairvoyance_emoji = items["clairvoyance"].get_emoji()
         self.seen = {}
+        # TODO put found, seen, unlocked in gimmick object
         self.contents = {
             region: {
                 "found": "-",
@@ -59,6 +63,9 @@ class GimmickInventory(Inventory):
         folder_path = os.path.join(base_path, team_name)
         save_manager.save(folder_path, "gimmick_inventory.json", self.serialize())
 
+    def update_gimmicks(self, gimmicks: Dict[str, Gimmick]):
+        self.gimmicks = gimmicks
+
     def get_zone(self, region: str) -> str:
         return self.gimmicks[region].zone
 
@@ -68,10 +75,13 @@ class GimmickInventory(Inventory):
     def get_unlock(self, region: str) -> bool:
         return self.contents[region]["unlocked"]
 
-    def unlock(self, region: str, state: bool = True):
+    def set_unlock(self, region: str, state: bool = True):
         self.contents[region]["unlocked"] = state
 
-    def get_seen(self, team_name: str, region: str) -> bool:
+    def get_see_count(self, region: str) -> int:
+        return self.contents[region]["seen"]
+
+    def is_seen(self, team_name: str, region: str) -> bool:
         if team_name not in self.seen:
             return False
 
@@ -80,6 +90,12 @@ class GimmickInventory(Inventory):
                 return True
 
         return False
+
+    def get_seen(self, team_name: str, region: str) -> Gimmick | None:
+        for gimmick in self.seen[team_name]:
+            if gimmick.region == region:
+                return gimmick
+        return None
 
     def see(self, team_name: str, gimmick: Gimmick, state: bool = True):
         if not state:
@@ -95,7 +111,13 @@ class GimmickInventory(Inventory):
         self.seen[team_name].append(gimmick)
 
     def is_found(self, region: str) -> bool:
-        return self.contents[region]["found"] != "-"
+        return self.get_found(region) != "-"
+
+    def get_found(self, region: str) -> str:
+        return self.contents[region]["found"]
+
+    def set_found(self, region: str, team_name: str):
+        self.contents[region]["found"] = team_name
 
     def get_valid_clairvoyance_gimmicks(self, seen_gimmicks: List[Gimmick]) -> List[Gimmick]:
         valid_gimmicks = []
@@ -112,7 +134,6 @@ class GimmickInventory(Inventory):
 
             valid_gimmicks.append(self.gimmicks[region])
         return valid_gimmicks
-
 
     def add_see_count(self, region: str, qty: int = 1):
         self.contents[region]["seen"] += qty
@@ -147,22 +168,50 @@ class GimmickInventory(Inventory):
         self.contents = json_data["contents"]
 
     def format_discord(self, team_name: str) -> str:
-        # TODO Add emojis, fix comma in gimmicks seen
+        # TODO Add emojis
         string = f"__**Gimmicks de l'équipe {team_name} :**__\n"
-        string_seen = f"__**Gimmicks observés :**__\n"
-
         for region in self.contents:
             gimmick = self.gimmicks[region]
-            string += f"**{gimmick.region} :** *{gimmick.zone}"
-            if self.contents[region]["unlocked"]:
-                string += f" - {gimmick.pokemon}"
-            string += "*\n"
 
+            found_team_name = self.get_found(region)
+            see_count = self.get_see_count(region)
+            unlocked = self.get_unlock(region)
+
+            if found_team_name != "-":
+                if found_team_name == team_name:
+                    string += f"{WHITE_CHECK_MARK} "
+                else:
+                    string += f"{CROSS_MARK} ~~"
+
+            elif see_count > 0:
+                for i in range(see_count):
+                    string += f"{self.clairvoyance_emoji}"
+                string += " "
+
+            else:
+                string += "- "
+
+            string += f"**{gimmick.region} :** *{gimmick.zone}"
+            if unlocked:
+                string += f" - {gimmick.pokemon}"
+            string += "*"
+
+            if found_team_name != "-" and found_team_name != team_name:
+                string += f"~~ *Trouvé par* **{found_team_name}**"
+
+            string += "\n"
+
+        string_seen = f"__**Gimmicks observés :**__\n"
         for team in self.seen:
-            string_seen += f"**{team} :** *"
-            for gimmick in self.seen[team]:
-                string_seen += f"{gimmick.zone} ({gimmick.region}), "
-            string_seen += "*\n"
+            n_seen = len(self.seen[team])
+            if n_seen > 0:
+                string_seen += f"**{team} :** *"
+                for i in range(len(self.seen[team])):
+                    if i > 0:
+                        string_seen += ", "
+                    gimmick = self.seen[team][i]
+                    string_seen += f"{gimmick.region} - {gimmick.zone}"
+                string_seen += "*\n"
 
         string += "\n" + string_seen
         return string[:2000]
