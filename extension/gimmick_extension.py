@@ -114,7 +114,7 @@ class GimmickExtension(interactions.Extension):
             await ctx.send("Erreur: le gimmick a déjà été validé.")
             return
 
-        if not self.gimmick_inventory.get_unlock(cat):
+        if not self.gimmick_inventory.is_unlock(cat):
             # TODO unlock warning
             warning_msg = await ctx.send("Attention ! Le Pokémon gimmick n'a jamais été révélé aux participants. Cette "
                                          "opération va valider le gimmick et révéler le Pokémon.\n"
@@ -204,7 +204,7 @@ class GimmickExtension(interactions.Extension):
             await ctx.send("Erreur. Impossible de modifier un gimmick déjà validé.")
             return
 
-        if self.gimmick_inventory.get_unlock(cat):
+        if self.gimmick_inventory.is_unlock(cat):
             warning_msg = await ctx.send("Attention ! Le Pokémon gimmick a déjà été révélé aux participants. Cette "
                                          "opération va conserver le statut et indiquer le nouveau Pokémon.\n"
                                          "Souhaitez-vous continuer ?")
@@ -288,7 +288,7 @@ class GimmickExtension(interactions.Extension):
         if not success:
             return
 
-        if self.gimmick_inventory.get_unlock(cat):
+        if self.gimmick_inventory.is_unlock(cat):
             await ctx.send("Erreur. Ce gimmick a déjà été révélé.")
             return
 
@@ -331,7 +331,7 @@ class GimmickExtension(interactions.Extension):
         if not success:
             return
 
-        if not self.gimmick_inventory.get_unlock(cat):
+        if not self.gimmick_inventory.is_unlock(cat):
             await ctx.send("Erreur. Ce gimmick est déjà caché.")
             return
 

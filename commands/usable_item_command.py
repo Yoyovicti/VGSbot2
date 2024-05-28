@@ -279,9 +279,11 @@ class UsableItemCommand(ItemCommand):
         await self.ctx.send(f"{item_manager.items['clairvoyance'].get_emoji(self.gold)} Inventaires mis à jour !")
 
     async def run_clairvoyance(self, gimmick_inv: GimmickInventory):
-        # TODO Edit allow to use Clairvoyance on its own team
+        # TODO Make use of gimmick commands
+        # TODO Gold clairvoyance on self team ?
         # Load valid teams
-        valid_teams = self.get_valid_clairvoyance_teams(gimmick_inv.seen)
+        valid_regions = self.get_valid_clairvoyance_regions(gimmick_inv)
+        valid_teams = list(valid_regions)
 
         # Get number of loops
         n_loop = 1
@@ -306,7 +308,7 @@ class UsableItemCommand(ItemCommand):
                     continue
                 return
 
-            # Remove target from valid teams (for gold boo)
+            # Remove target from valid teams (for gold clairvoyance)
             target_team = valid_teams[KEYCAP_NUMBERS.index(selected_reaction)]
             valid_teams.remove(target_team)
 
@@ -331,25 +333,31 @@ class UsableItemCommand(ItemCommand):
                     else:
                         self.item_inventory.remove("clairvoyance")
 
-            # Get valid regions to choose from
-            valid_regions = []
-            target_inv = target_team.inventory_manager.gimmick_inventory
-            for region in target_inv.contents:
-                if target_inv.is_found(region):
-                    continue
-                if gimmick_inv.is_seen(target_team.name, region):
-                    continue
-                valid_regions.append(region)
-
-            # Choose random region
+            # Choose random region in valid regions
             rng = random.Generator(random.MT19937())
-            selected_region = rng.choice(valid_regions)
+            selected_region = rng.choice(valid_regions[target_team.id])
 
-            # Process inventories
+            # For team that use Clairvoyance, unlock gimmick of selected region
+            # No need to save and edit inventory message, it will be done later anyway
+            if target_team.id == self.team.id:
+                gimmick_inv.set_unlock(selected_region)
+
+                # Send message
+                message = (
+                    f"*Le Pokémon gimmick de la zone* **{gimmick_inv.get_zone(selected_region)} ({selected_region})** *a été révélé. "
+                    f"Il s'agit de* **{gimmick_inv.get_pokemon(selected_region)}**.")
+                await self.item_channel.send(message)
+
+                # Confirmation message
+                await self.ctx.send("Gimmick révélé !")
+                return
+
+            # For other teams, add zone to list of seen gimmicks
+            target_inv = target_team.inventory_manager.gimmick_inventory
             gimmick_inv.see(target_team.name, target_inv.gimmicks[selected_region])
             target_inv.add_see_count(selected_region)
 
-            # Save target inventory, edit inventory message (original inventory is saved later)
+            # Save target inventory, edit message (original inventory is saved later)
             target_inv.save(TEAM_FOLDER, target_team.id)
             target_inv_msg = await target_item_channel.fetch_message(target_inv.message_id)
             await target_inv_msg.edit(content=target_inv.format_discord(target_team.name))
@@ -367,18 +375,29 @@ class UsableItemCommand(ItemCommand):
             # Update loop counter
             n_loop -= 1
 
-    def get_valid_clairvoyance_teams(self, seen_gimmicks: Dict[str, List[Gimmick]]) -> List[str]:
-        valid_teams = []
+    def get_valid_clairvoyance_regions(self, gimmick_inv: GimmickInventory) -> Dict[str, List[str]]:
+        valid_teams = {}
         for team in team_manager.teams:
             team_inst = team_manager.teams[team]
             curr_inv = team_inst.inventory_manager.gimmick_inventory
             team_name = team_inst.name
 
-            if (team == self.team.id
-                    or not curr_inv.initialized
-                    or team_name in seen_gimmicks and len(curr_inv.get_valid_clairvoyance_gimmicks(seen_gimmicks[team_name])) == 0):
-                continue
-            valid_teams.append(team)
+            for region in curr_inv.contents:
+                # For team that uses Clairvoyance, only add locked gimmicks
+                # Don't add current team for gold clairvoyance
+                if self.team.id == team_inst.id and (self.gold or curr_inv.is_unlock(region)):
+                    continue
+
+                # For other teams, add gimmicks that are not found and not already seen
+                if (self.team.id != team_inst.id
+                        and (curr_inv.is_found(region) or gimmick_inv.is_seen(team_name, region))):
+                    continue
+
+                if team in valid_teams:
+                    valid_teams[team].append(region)
+                else:
+                    valid_teams[team] = [region]
+
         return valid_teams
 
     async def run_cadoizo_command(self):

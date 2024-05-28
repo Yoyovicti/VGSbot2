@@ -72,7 +72,7 @@ class GimmickInventory(Inventory):
     def get_pokemon(self, region: str) -> str:
         return self.gimmicks[region].pokemon
 
-    def get_unlock(self, region: str) -> bool:
+    def is_unlock(self, region: str) -> bool:
         return self.contents[region]["unlocked"]
 
     def set_unlock(self, region: str, state: bool = True):
@@ -119,22 +119,6 @@ class GimmickInventory(Inventory):
     def set_found(self, region: str, team_name: str):
         self.contents[region]["found"] = team_name
 
-    def get_valid_clairvoyance_gimmicks(self, seen_gimmicks: List[Gimmick]) -> List[Gimmick]:
-        valid_gimmicks = []
-        for region in self.contents:
-            skip = False
-            if self.is_found(region):
-                continue
-            for gimmick in seen_gimmicks:
-                if gimmick.region == region:
-                    skip = True
-                    break
-            if skip:
-                continue
-
-            valid_gimmicks.append(self.gimmicks[region])
-        return valid_gimmicks
-
     def add_see_count(self, region: str, qty: int = 1):
         self.contents[region]["seen"] += qty
 
@@ -175,7 +159,7 @@ class GimmickInventory(Inventory):
 
             found_team_name = self.get_found(region)
             see_count = self.get_see_count(region)
-            unlocked = self.get_unlock(region)
+            unlocked = self.is_unlock(region)
 
             if found_team_name != "-":
                 if found_team_name == team_name:
