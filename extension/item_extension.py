@@ -174,6 +174,8 @@ class ItemExtension(interactions.Extension):
     async def tirage_command(self, ctx: interactions.SlashContext, method: str, pos: int, qty: int = 1):
         # TODO Carapace, Éclair
         # TODO Mission, Quest
+        # TODO Charme
+        # TODO semi-random ?
         success = await self.load_team_info(ctx)
         if not success:
             return
@@ -447,25 +449,6 @@ class ItemExtension(interactions.Extension):
     async def paopou_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                              stealable: str = "oui"):
         command = ClassicItemCommand(self.bot, ctx, "paopou", param="remove", qty=qty, gold=(gold == "oui"),
-                                     safe=(stealable == "non"))
-        await command.run()
-
-    @interactions.slash_command(
-        name="d6",
-        description="Utilise un D6",
-        scopes=GUILD_IDS,
-        options=[
-            QTY_OPTION,
-            GOLD_OPTION,
-            SAFE_OPTION
-        ],
-        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
-        dm_permission=False
-    )
-    async def d6_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
-                         stealable: str = "oui"):
-        # TODO Commands to edit gimmicks manually
-        command = ClassicItemCommand(self.bot, ctx, "d6", param="remove", qty=qty, gold=(gold == "oui"),
                                      safe=(stealable == "non"))
         await command.run()
 

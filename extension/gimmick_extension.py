@@ -1,5 +1,6 @@
 import interactions
 
+from commands.gimmick_item_command import GimmickItemCommand
 from gimmick import Gimmick
 from init_config import GUILD_IDS, team_manager, gimmick_manager, TEAM_FOLDER
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS, CROSS_MARK
@@ -7,6 +8,7 @@ from reaction_manager import ReactionManager
 
 
 # TODO Command to add gimmick
+# TODO Refactor with gimmick command
 
 class GimmickExtension(interactions.Extension):
     REGION_OPTION = interactions.SlashCommandOption(
@@ -94,6 +96,22 @@ class GimmickExtension(interactions.Extension):
         return True
 
     @interactions.slash_command(
+        name="d6",
+        description="Utilise un D6",
+        scopes=GUILD_IDS,
+        options=[
+            REGION_OPTION,
+            ZONE_OPTION,
+            POKEMON_OPTION
+        ],
+        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
+        dm_permission=False
+    )
+    async def d6_command(self, ctx: interactions.SlashContext, cat, zone, pokemon):
+        command = GimmickItemCommand(self.bot, ctx, "d6", region=cat, zone=zone, pokemon=pokemon)
+        await command.run()
+
+    @interactions.slash_command(
         name="gimmick",
         description="Effectue une action sur les gimmicks",
         scopes=GUILD_IDS,
@@ -115,7 +133,6 @@ class GimmickExtension(interactions.Extension):
             return
 
         if not self.gimmick_inventory.is_unlock(cat):
-            # TODO unlock warning
             warning_msg = await ctx.send("Attention ! Le Pokémon gimmick n'a jamais été révélé aux participants. Cette "
                                          "opération va valider le gimmick et révéler le Pokémon.\n"
                                          "Souhaitez-vous continuer ?")
@@ -215,7 +232,6 @@ class GimmickExtension(interactions.Extension):
                 return
 
         if self.gimmick_inventory.get_see_count(cat) > 0:
-            # TODO update opponent list if seen
             warning_msg = await ctx.send("Attention ! La zone gimmick a déjà été observée par d'autres équipes. Cette "
                                          "opération va indiquer le changement aux équipes concernées.\n"
                                          "Souhaitez-vous continuer ?")
