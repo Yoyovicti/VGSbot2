@@ -12,7 +12,7 @@ from reaction_manager import ReactionManager
 
 class GimmickExtension(interactions.Extension):
     REGION_OPTION = interactions.SlashCommandOption(
-        name="catégorie",
+        name="région",
         description="La région du gimmick",
         type=interactions.OptionType.STRING,
         required=True,
@@ -21,6 +21,14 @@ class GimmickExtension(interactions.Extension):
             interactions.SlashCommandChoice(name=cat, value=cat)
             for cat in gimmick_manager.gimmicks[list(gimmick_manager.gimmicks)[0]]
         ]
+    )
+
+    CAT_OPTION = interactions.SlashCommandOption(
+        name="catégorie",
+        description="La région du gimmick",
+        type=interactions.OptionType.STRING,
+        required=True,
+        argument_name="category"
     )
 
     TEAM_OPTION = interactions.SlashCommandOption(
@@ -197,6 +205,48 @@ class GimmickExtension(interactions.Extension):
 
         # Confirmation message
         await ctx.send("Gimmick validé !")
+
+    @interactions.slash_command(
+        name="gimmick",
+        description="Effectue une action sur les gimmicks",
+        scopes=GUILD_IDS,
+        options=[
+            CAT_OPTION,
+            ZONE_OPTION,
+            POKEMON_OPTION
+        ],
+        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
+        dm_permission=False,
+        sub_cmd_name="ajouter",
+        sub_cmd_description="Ajouter un nouveau gimmick de liste"
+    )
+    async def gimmick_add_command(self, ctx: interactions.SlashContext, category: str, zone: str, pokemon: str):
+        success = await self.load_team_info(ctx)
+        if not success:
+            return
+
+        if category in self.gimmick_inventory.contents:
+            await ctx.send("Erreur. Cette catégorie a déjà un gimmick attribué.")
+            return
+
+        # Edit gimmick for current team
+        self.add_gimmick(category, zone, pokemon)
+
+        # Edit inventory message and send to item channel for current team
+        inv_msg = await self.item_channel.fetch_message(self.gimmick_inventory.message_id)
+        await inv_msg.edit(content=self.gimmick_inventory.format_discord(self.team.name))
+        message = (f"*Le gimmick de la région **{category}** a été ajouté.\n"
+                   f"La zone est* **{zone}**.")
+        await self.item_channel.send(message)
+
+        # Confirmation message
+        await ctx.send("Gimmick ajouté !")
+
+    def add_gimmick(self, cat: str, zone: str, pokemon: str):
+        # Update gimmick in list, add to inventory and save
+        gimmick_manager.add_gimmick(self.team.id, cat, zone, pokemon)
+        self.gimmick_inventory.add_gimmick(gimmick_manager.gimmicks[self.team.id], cat)
+        self.gimmick_inventory.save(TEAM_FOLDER, self.team.id)
 
     @interactions.slash_command(
         name="gimmick",

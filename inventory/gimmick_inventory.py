@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, List
+from typing import Dict
 
 import save_manager
 from gimmick import Gimmick
@@ -62,6 +62,14 @@ class GimmickInventory(Inventory):
     def save(self, base_path: str, team_name: str):
         folder_path = os.path.join(base_path, team_name)
         save_manager.save(folder_path, "gimmick_inventory.json", self.serialize())
+
+    def add_gimmick(self, gimmicks: Dict[str, Gimmick], region: str):
+        self.update_gimmicks(gimmicks)
+        self.contents[region] = {
+            "found": "-",
+            "seen": 0,
+            "unlocked": False
+        }
 
     def update_gimmicks(self, gimmicks: Dict[str, Gimmick]):
         self.gimmicks = gimmicks
@@ -152,7 +160,6 @@ class GimmickInventory(Inventory):
         self.contents = json_data["contents"]
 
     def format_discord(self, team_name: str) -> str:
-        # TODO Add emojis
         string = f"__**Gimmicks de l'équipe {team_name} :**__\n"
         for region in self.contents:
             gimmick = self.gimmicks[region]

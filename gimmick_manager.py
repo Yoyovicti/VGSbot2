@@ -21,6 +21,9 @@ class GimmickManager:
                     self.gimmicks[team][region] = gimmick
                 print(f"Loaded gimmicks for team: {team}")
 
+    def add_gimmick(self, team: str, region: str, zone: str, pokemon: str):
+        self.edit_gimmick(team, region, zone, pokemon)
+
     def edit_gimmick(self, team: str, region: str, zone: str, pokemon: str):
         # Edit gimmick
         gimmick = Gimmick(region, zone, pokemon)

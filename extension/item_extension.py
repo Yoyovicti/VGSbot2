@@ -2,6 +2,7 @@ import interactions
 
 from champi import Champi
 from commands.classic_item_command import ClassicItemCommand
+from commands.gimmick_item_command import GimmickItemCommand
 from commands.usable_item_command import UsableItemCommand
 from init_config import GUILD_IDS, item_manager, team_manager, TEAM_FOLDER, roll_manager
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N
@@ -364,8 +365,8 @@ class ItemExtension(interactions.Extension):
     )
     async def clairvoyance_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                                    stealable: str = "oui"):
-        command = UsableItemCommand(self.bot, ctx, param="clairvoyance", qty=qty, gold=(gold == "oui"),
-                                    safe=(stealable == "non"))
+        command = GimmickItemCommand(self.bot, ctx, param="clairvoyance", qty=qty, gold=(gold == "oui"),
+                                     safe=(stealable == "non"))
         await command.run()
 
     @interactions.slash_command(
