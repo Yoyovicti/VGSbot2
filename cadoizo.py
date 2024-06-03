@@ -6,9 +6,9 @@ from inventory.item_inventory import ItemInventory
 
 
 class Cadoizo:
-    def __init__(self, item_inventory: ItemInventory, n_items: int = 3, is_gold: bool = False):
+    def __init__(self, item_inventory: ItemInventory, is_gold: bool = False):
         self.item_inventory = item_inventory
-        self.n_items = n_items
+        self.n_items = 5 if is_gold else 3
         self.is_gold = is_gold
 
     def run(self):
