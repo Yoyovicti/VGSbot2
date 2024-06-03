@@ -44,10 +44,10 @@ python3 main.py
 ```
 
 ## Changelog
-| <b>Version | <b>Release date    | <b>Changes                |
-|------------|--------------------|---------------------------|
-| <b>1.1     | *Work in progress* | Gimmicks and Clairvoyance |
-| <b>1.0     | 2024-05-20         | Basic item functionality  |
+| <b>Version | <b>Release date | <b>Changes                |
+|------------|-----------------|---------------------------|
+| <b>1.1     | 2024-05-30      | Gimmicks and Clairvoyance |
+| <b>1.0     | 2024-05-20      | Basic item functionality  |
 
 ## Contributors
 - [Yoyovicti](https://github.com/Yoyovicti)
