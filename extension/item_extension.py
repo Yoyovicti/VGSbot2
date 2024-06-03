@@ -1,13 +1,12 @@
 import interactions
 
-from champi import Champi
 from commands.classic_item_command import ClassicItemCommand
 from commands.gimmick_item_command import GimmickItemCommand
+from commands.roll_item_command import RollItemCommand
 from commands.usable_item_command import UsableItemCommand
 from init_config import GUILD_IDS, item_manager, team_manager, TEAM_FOLDER, roll_manager
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N
 from reaction_manager import ReactionManager
-from roll import Roll
 
 
 class ItemExtension(interactions.Extension):
@@ -84,6 +83,18 @@ class ItemExtension(interactions.Extension):
         required=True,
         argument_name="pos",
         min_value=1
+    )
+
+    CHARM_OPTION = interactions.SlashCommandOption(
+        name="charme",
+        description="Si le charme est équipé",
+        type=interactions.OptionType.STRING,
+        required=False,
+        argument_name="charm",
+        choices=[
+            interactions.SlashCommandChoice(name="oui", value="oui"),
+            interactions.SlashCommandChoice(name="non", value="non")
+        ]
     )
 
     def __init__(self, bot: interactions.Client):
@@ -168,62 +179,14 @@ class ItemExtension(interactions.Extension):
             METHODE_OPTION,
             POSITION_OPTION,
             QTY_OPTION,
+            CHARM_OPTION
         ],
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False
     )
-    async def tirage_command(self, ctx: interactions.SlashContext, method: str, pos: int, qty: int = 1):
-        # TODO Carapace, Éclair
-        # TODO Mission, Quest
-        # TODO Charme
-        # TODO semi-random ?
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        should_save = False
-
-        for _ in range(qty):
-            roll = Roll(self.item_inventory, method, pos)
-            roll.run()
-
-            message = "*Aucun objet tiré*"
-
-            if roll.item != "":
-                message = f"*Objet tiré:* {item_manager.items[roll.item].get_emoji()}\n"
-
-                if not item_manager.items[roll.item].instant:
-                    # Add item
-                    self.item_inventory.add(roll.item)
-                    should_save = True
-
-            team_message = message
-            boss_message = message
-
-            if roll.item == "champinocif":
-                valid_teams = [team for team in team_manager.teams if team != self.team.id]
-                champi = Champi(valid_teams)
-                target_team = champi.run()
-
-                team_message += f"*Vos points s'envolent vers d'autres cieux...*"
-                boss_message += (f"{item_manager.items[roll.item].get_emoji()} *Les points du shiny s'en vont vers "
-                                 f"l'équipe **{team_manager.teams[target_team].name}***\n")
-
-            await self.item_channel.send(team_message)
-            await ctx.send(boss_message)
-
-            # Run Cadoizo after sending roll result
-            if roll.item == "cadoizo":
-                await self.run_cadoizo(ctx, enable_save=False)
-                should_save = True
-
-        # Save inventory
-        if should_save:
-            self.item_inventory.save(TEAM_FOLDER, self.team.id)
-
-        # Edit inventory message and send to item channel
-        inv_msg = await self.item_channel.fetch_message(self.item_inventory.message_id)
-        await inv_msg.edit(content=self.item_inventory.format_discord(self.team.name))
+    async def tirage_command(self, ctx: interactions.SlashContext, method: str, pos: int, qty: int = 1, charm: str = "non"):
+        command = RollItemCommand(self.bot, ctx, method, pos, qty=qty, charm=(charm == "oui"))
+        await command.run()
 
     @interactions.slash_command(
         name="maxitomate",

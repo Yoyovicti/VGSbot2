@@ -12,6 +12,9 @@ class ItemCommand:
         self.item_inventory = None
         self.item_channel = None
 
+    async def run(self):
+        raise NotImplementedError
+
     async def load_team_info(self) -> bool:
         self.team = team_manager.get_team(str(self.ctx.channel_id))
         if self.team is None:

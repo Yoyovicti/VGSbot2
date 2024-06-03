@@ -11,7 +11,7 @@ from reaction_manager import ReactionManager
 
 class UsableItemCommand(ItemCommand):
     def __init__(self, bot: interactions.Client, ctx: interactions.SlashContext, param: str, qty: int = 1,
-                 gold: bool = False, safe: bool = False):
+                 gold: bool = False, safe: bool = False, enable_save: bool = True):
         super().__init__(bot, ctx)
 
         self.command_map = {
@@ -25,6 +25,8 @@ class UsableItemCommand(ItemCommand):
         self.qty = qty
         self.gold = gold
         self.safe = safe
+
+        self.enable_save = enable_save
 
     async def run(self):
         if self.param in self.command_map:
@@ -229,13 +231,18 @@ class UsableItemCommand(ItemCommand):
         return item_emojis
 
     async def run_cadoizo_command(self):
+        # Load origin team info
+        success = await self.load_team_info()
+        if not success:
+            return
+
         should_save = False
         for _ in range(self.qty):
             if await self.run_cadoizo(self.gold):
                 should_save = True
 
         # Save inventory
-        if should_save:
+        if self.enable_save and should_save:
             self.item_inventory.save(TEAM_FOLDER, self.team.id)
 
         # Edit inventory message and send to item channel

@@ -20,10 +20,11 @@ class RollManager:
             method_file.readline()
             print("> Methods")
             for method in method_file:
-                method_id, name, item_drop, mission_drop, quest_drop = method.split()
+                method_id, name, item_drop, mission_drop, quest_drop, charm_roll = method.split()
                 name = name.replace("_", " ")
 
-                method_inst = Method(method_id, name, float(item_drop), float(mission_drop), float(quest_drop))
+                method_inst = Method(method_id, name, float(item_drop), float(mission_drop), float(quest_drop),
+                                     float(charm_roll))
                 self.method_drops[method_id] = method_inst
                 print(f"Loaded method: {method_inst}")
 
