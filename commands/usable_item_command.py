@@ -1,12 +1,12 @@
 import interactions
 from numpy import random
 
-from boo import Boo
-from cadoizo import Cadoizo
+from logic.boo import Boo
+from logic.cadoizo import Cadoizo
 from commands.item_command import ItemCommand
 from init_config import item_manager, TEAM_FOLDER, ORBE_SUCCESS_RATE, team_manager, roll_manager
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS, CROSS_MARK
-from reaction_manager import ReactionManager
+from manager.reaction_manager import ReactionManager
 
 
 class UsableItemCommand(ItemCommand):

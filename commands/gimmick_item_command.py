@@ -4,10 +4,10 @@ import interactions
 from numpy import random
 
 from commands.usable_item_command import UsableItemCommand
-from gimmick import Gimmick
+from definition.gimmick import Gimmick
 from init_config import team_manager, TEAM_FOLDER, item_manager, gimmick_manager
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS, CROSS_MARK
-from reaction_manager import ReactionManager
+from manager.reaction_manager import ReactionManager
 
 
 class GimmickItemCommand(UsableItemCommand):

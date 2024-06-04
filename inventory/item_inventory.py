@@ -1,9 +1,9 @@
 import os.path
 from typing import Dict
 
-import save_manager
+from manager import save_manager
 from inventory.inventory import Inventory
-from item import Item
+from definition.item import Item
 
 CLASSIC_ITEM = 0
 SAFE_ITEM = 1

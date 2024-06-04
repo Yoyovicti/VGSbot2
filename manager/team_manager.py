@@ -1,14 +1,14 @@
 import os
 from typing import Dict
 
-from gimmick import Gimmick
+from definition.gimmick import Gimmick
 from inventory.gimmick_inventory import GimmickInventory
 from inventory.inventory_manager import InventoryManager
 from inventory.item_inventory import ItemInventory
 from inventory.mission_inventory import MissionInventory
 from inventory.quest_inventory import QuestInventory
-from item import Item
-from team import Team
+from definition.item import Item
+from definition.team import Team
 
 
 class TeamManager:

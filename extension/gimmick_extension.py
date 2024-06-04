@@ -1,10 +1,10 @@
 import interactions
 
 from commands.gimmick_item_command import GimmickItemCommand
-from gimmick import Gimmick
+from definition.gimmick import Gimmick
 from init_config import GUILD_IDS, team_manager, gimmick_manager, TEAM_FOLDER
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS, CROSS_MARK
-from reaction_manager import ReactionManager
+from manager.reaction_manager import ReactionManager
 
 
 # TODO Command to add gimmick

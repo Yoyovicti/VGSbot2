@@ -1,6 +1,6 @@
 import os
 
-from item import Item
+from definition.item import Item
 
 
 class ItemManager:

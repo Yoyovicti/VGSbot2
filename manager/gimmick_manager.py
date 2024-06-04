@@ -1,8 +1,8 @@
 import json
 import os
 
-import save_manager
-from gimmick import Gimmick
+from manager import save_manager
+from definition.gimmick import Gimmick
 
 
 class GimmickManager:

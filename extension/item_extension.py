@@ -4,9 +4,7 @@ from commands.classic_item_command import ClassicItemCommand
 from commands.gimmick_item_command import GimmickItemCommand
 from commands.roll_item_command import RollItemCommand
 from commands.usable_item_command import UsableItemCommand
-from init_config import GUILD_IDS, item_manager, team_manager, TEAM_FOLDER, roll_manager
-from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N
-from reaction_manager import ReactionManager
+from init_config import GUILD_IDS, item_manager, team_manager, roll_manager
 
 
 class ItemExtension(interactions.Extension):
@@ -415,58 +413,3 @@ class ItemExtension(interactions.Extension):
         command = ClassicItemCommand(self.bot, ctx, "paopou", param="remove", qty=qty, gold=(gold == "oui"),
                                      safe=(stealable == "non"))
         await command.run()
-
-    async def run_remove(self, ctx: interactions.SlashContext, item: str, qty: int = 1, is_gold: bool = False,
-                         is_safe: bool = False, silent: bool = False) -> bool:
-        # Check quantity
-        if self.item_inventory.quantity(item, is_gold, is_safe) < qty:
-            return await self.run_remove_checks(ctx, item, qty, is_gold, is_safe, silent)
-
-        # Remove item and save inventory
-        self.item_inventory.remove(item, qty, is_gold, is_safe)
-        self.item_inventory.save(TEAM_FOLDER, self.team.id)
-
-        # Edit inventory message
-        inv_msg = await self.item_channel.fetch_message(self.item_inventory.message_id)
-        await inv_msg.edit(content=self.item_inventory.format_discord(self.team.name))
-
-        # Send messages
-        if not silent:
-            await self.item_channel.send(
-                f"{item_manager.items[item].get_emoji(is_gold)} x{qty} retiré de l'inventaire !")
-            await ctx.send("Inventaire mis à jour !")
-
-        return True
-
-    async def run_remove_checks(self, ctx: interactions.SlashContext, item: str,
-                                qty: int = 1, is_gold: bool = False, is_safe: bool = False, silent=False) -> bool:
-        classic_qty = self.item_inventory.quantity(item)
-
-        if is_gold or is_safe or classic_qty + self.item_inventory.quantity(item, safe=True) < qty:
-            await ctx.send("Erreur: L'inventaire ne contient pas assez de cet objet.")
-            return False
-
-        # Ask for confirmation in case safe items will be removed
-        warning_msg = await ctx.send("Cette opération va retirer des objets non volables de l'inventaire. "
-                                     "Souhaitez-vous continuer ?")
-        reaction_manager = ReactionManager(warning_msg, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
-        reaction = await reaction_manager.run()
-        if reaction != REGIONAL_INDICATOR_O:
-            await ctx.send("Opération annulée.")
-            return False
-
-        # Remove items from inventory and save
-        self.item_inventory.remove(item, classic_qty)
-        self.item_inventory.remove(item, qty - classic_qty, safe=True)
-        self.item_inventory.save(TEAM_FOLDER, self.team.id)
-
-        # Edit inventory
-        inv_msg = await self.item_channel.fetch_message(self.item_inventory.message_id)
-        await inv_msg.edit(content=self.item_inventory.format_discord(self.team.name))
-
-        # Send messages
-        if not silent:
-            await self.item_channel.send(f"{item_manager.items[item].get_emoji()} x{qty} retiré de l'inventaire !")
-            await ctx.send("Inventaire mis à jour !")
-
-        return True

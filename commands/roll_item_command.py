@@ -5,7 +5,7 @@ from numpy import random
 from commands.item_command import ItemCommand
 from commands.usable_item_command import UsableItemCommand
 from init_config import TEAM_FOLDER, item_manager, roll_manager, team_manager
-from roll_manager import N_POS
+from manager.roll_manager import N_POS
 
 
 class RollItemCommand(ItemCommand):

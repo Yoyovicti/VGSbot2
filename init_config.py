@@ -1,9 +1,9 @@
 import os
 
-from item_manager import ItemManager
-from gimmick_manager import GimmickManager
-from roll_manager import RollManager
-from team_manager import TeamManager
+from manager.item_manager import ItemManager
+from manager.gimmick_manager import GimmickManager
+from manager.roll_manager import RollManager
+from manager.team_manager import TeamManager
 
 DATA_FOLDER = "data"
 

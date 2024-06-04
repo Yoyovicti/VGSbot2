@@ -2,11 +2,11 @@ import json
 import os
 from typing import Dict
 
-import save_manager
-from gimmick import Gimmick
+from manager import save_manager
+from definition.gimmick import Gimmick
 from init_emoji import WHITE_CHECK_MARK, CROSS_MARK
 from inventory.inventory import Inventory
-from item import Item
+from definition.item import Item
 
 
 class GimmickInventory(Inventory):

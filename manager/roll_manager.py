@@ -2,8 +2,8 @@ import os
 import json
 import warnings
 
-from item_drop import ItemDrop
-from method import Method
+from definition.item_drop import ItemDrop
+from definition.method import Method
 
 N_POS = 6
 
