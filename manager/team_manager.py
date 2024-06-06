@@ -2,6 +2,7 @@ import os
 from typing import Dict
 
 from definition.gimmick import Gimmick
+from definition.mission import Mission
 from inventory.gimmick_inventory import GimmickInventory
 from inventory.inventory_manager import InventoryManager
 from inventory.item_inventory import ItemInventory
@@ -12,30 +13,34 @@ from definition.team import Team
 
 
 class TeamManager:
-    def __init__(self, vgs_path: str, team_path: str, items: Dict[str, Item], gimmicks: Dict[str, Dict[str, Gimmick]]):
+    def __init__(self, vgs_path: str, team_path: str, items: Dict[str, Item], missions: Dict[str, Mission],
+                 gimmicks: Dict[str, Dict[str, Gimmick]]):
         teams_path = os.path.join(vgs_path, "teams.txt")
         self.teams = {}
         with open(teams_path, "r") as teams_file:
             teams_file.readline()
             print("===== TeamManager =====")
             for team in teams_file:
-                team_id, name, bot_channel_id, item_channel_id, shiny_channel_id = team.split()
+                team_id, name, bot_channel_id, item_channel_id, shiny_channel_id, role_id = team.split()
                 name = name.replace("_", " ")
 
                 item_inventory = ItemInventory(items)
                 item_inventory.load(team_path, team_id)
+
+                mission_inventory = MissionInventory(missions)
+                mission_inventory.load(team_path, team_id)
 
                 gimmick_inventory = GimmickInventory(gimmicks[team_id], items)
                 gimmick_inventory.load(team_path, team_id)
 
                 inv_manager = InventoryManager(
                     item_inventory,
-                    MissionInventory(),
+                    mission_inventory,
                     QuestInventory(),
                     gimmick_inventory
                 )
 
-                team_inst = Team(team_id, name, bot_channel_id, item_channel_id, shiny_channel_id, inv_manager)
+                team_inst = Team(team_id, name, bot_channel_id, item_channel_id, shiny_channel_id, role_id, inv_manager)
                 self.teams[team_id] = team_inst
                 print(f"Loaded team: {team_inst}")
 
