@@ -19,3 +19,10 @@ class Mission:
         self.name = name
         self.description = description
         self.reward = reward
+
+    def format_discord(self) -> str:
+        return (f"**{self}**\n"
+                f"{self.description}")
+
+    def __str__(self):
+        return f"Mission {self.id} - {self.name}"
