@@ -3,6 +3,7 @@ from typing import Dict
 
 from definition.gimmick import Gimmick
 from definition.mission import Mission
+from definition.quest import Quest
 from inventory.gimmick_inventory import GimmickInventory
 from inventory.inventory_manager import InventoryManager
 from inventory.item_inventory import ItemInventory
@@ -14,7 +15,7 @@ from definition.team import Team
 
 class TeamManager:
     def __init__(self, vgs_path: str, team_path: str, items: Dict[str, Item], missions: Dict[str, Mission],
-                 gimmicks: Dict[str, Dict[str, Gimmick]]):
+                 quests: Dict[str, Quest], gimmicks: Dict[str, Dict[str, Gimmick]]):
         teams_path = os.path.join(vgs_path, "teams.txt")
         self.teams = {}
         with open(teams_path, "r") as teams_file:
@@ -30,13 +31,16 @@ class TeamManager:
                 mission_inventory = MissionInventory(missions)
                 mission_inventory.load(team_path, team_id)
 
+                quest_inventory = QuestInventory(quests)
+                quest_inventory.load(team_path, team_id)
+
                 gimmick_inventory = GimmickInventory(gimmicks[team_id], items)
                 gimmick_inventory.load(team_path, team_id)
 
                 inv_manager = InventoryManager(
                     item_inventory,
                     mission_inventory,
-                    QuestInventory(),
+                    quest_inventory,
                     gimmick_inventory
                 )
 

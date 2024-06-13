@@ -1,7 +1,7 @@
 import interactions
 
 from commands.mission_command import MissionCommand
-from init_config import GUILD_IDS, team_manager, mission_manager
+from init_config import GUILD_IDS, mission_manager
 
 
 class ItemExtension(interactions.Extension):

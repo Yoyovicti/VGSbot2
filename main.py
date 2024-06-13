@@ -9,4 +9,5 @@ if __name__ == "__main__":
     bot.load_extension("extension.item_extension")
     bot.load_extension("extension.gimmick_extension")
     bot.load_extension("extension.mission_extension")
+    bot.load_extension("extension.quest_extension")
     bot.start()
