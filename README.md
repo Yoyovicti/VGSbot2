@@ -46,6 +46,7 @@ python3 main.py
 ## Changelog
 | <b>Version | <b>Release date | <b>Changes                |
 |------------|-----------------|---------------------------|
+| <b>1.2     | 2024-06-08      | Missions                  |
 | <b>1.1     | 2024-05-30      | Gimmicks and Clairvoyance |
 | <b>1.0     | 2024-05-20      | Basic item functionality  |
 
