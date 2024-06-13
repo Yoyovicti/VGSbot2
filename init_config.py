@@ -3,6 +3,7 @@ import os
 from manager.item_manager import ItemManager
 from manager.gimmick_manager import GimmickManager
 from manager.mission_manager import MissionManager
+from manager.quest_manager import QuestManager
 from manager.roll_manager import RollManager
 from manager.team_manager import TeamManager
 
@@ -36,9 +37,10 @@ ORBE_SUCCESS_RATE = 0.5
 
 # Load Managers (Items, Missions, Gimmicks, Teams, Roll)
 item_manager = ItemManager(VGS_FOLDER)
-mission_manager = MissionManager(VGS_FOLDER)
+mission_manager = MissionManager(VGS_FOLDER, item_manager.items)
+quest_manager = QuestManager(VGS_FOLDER, item_manager.items)
 gimmick_manager = GimmickManager(VGS_FOLDER)
-team_manager = TeamManager(VGS_FOLDER, TEAM_FOLDER, item_manager.items, mission_manager.missions,
+team_manager = TeamManager(VGS_FOLDER, TEAM_FOLDER, item_manager.items, mission_manager.missions, quest_manager.quests,
                            gimmick_manager.gimmicks)
 roll_manager = RollManager(VGS_FOLDER)
 
