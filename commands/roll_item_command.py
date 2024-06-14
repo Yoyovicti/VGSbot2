@@ -61,17 +61,17 @@ class RollItemCommand(ItemCommand):
             boss_message += (f"{item_manager.items[item].get_emoji()} *Les points du shiny s'en vont vers "
                              f"l'équipe* **{team_manager.teams[target_team].name}**\n")
 
+        if item == "carapacebleue" or item == "eclair":
+            boss_message += team_manager.get_boss_mention()
+
         await self.item_channel.send(team_message)
-        await self.ctx.send(boss_message)
+        await self.ctx.channel.send(boss_message)
 
         # Run Cadoizo after sending message
         if item == "cadoizo":
             command = UsableItemCommand(self.bot, self.ctx, "cadoizo", enable_save=False)
             await command.run()
             should_save = True
-
-        # TODO CB
-        # TODO Eclair
 
         if enable_charm and self.charm:
             charm_rng = random.Generator(random.MT19937())

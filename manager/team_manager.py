@@ -5,7 +5,7 @@ from definition.gimmick import Gimmick
 from definition.mission import Mission
 from definition.quest import Quest
 from inventory.gimmick_inventory import GimmickInventory
-from inventory.inventory_manager import InventoryManager
+from manager.inventory_manager import InventoryManager
 from inventory.item_inventory import ItemInventory
 from inventory.mission_inventory import MissionInventory
 from inventory.quest_inventory import QuestInventory
@@ -16,6 +16,12 @@ from definition.team import Team
 class TeamManager:
     def __init__(self, vgs_path: str, team_path: str, items: Dict[str, Item], missions: Dict[str, Mission],
                  quests: Dict[str, Quest], gimmicks: Dict[str, Dict[str, Gimmick]]):
+        boss_roles_path = os.path.join(vgs_path, "boss.txt")
+        self.boss_roles = []
+        with open(boss_roles_path, "r") as boss_file:
+            for role_id in boss_file:
+                self.boss_roles.append(role_id.rstrip())
+
         teams_path = os.path.join(vgs_path, "teams.txt")
         self.teams = {}
         with open(teams_path, "r") as teams_file:
@@ -59,3 +65,9 @@ class TeamManager:
             if self.teams[team_id].bot_channel_id == channel_id:
                 return team_id
         return ""
+
+    def get_boss_mention(self) -> str:
+        boss_mention = ""
+        for role_id in self.boss_roles:
+            boss_mention += f"<@&{role_id}> "
+        return boss_mention
