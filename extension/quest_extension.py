@@ -62,10 +62,26 @@ class QuestExtension(interactions.Extension):
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False,
         sub_cmd_name="annuler",
-        sub_cmd_description="Annuler une quête en cours ou validée."
+        sub_cmd_description="Annuler une quête en cours ou validée sans sauvegarder."
     )
     async def quest_cancel_command(self, ctx: interactions.SlashContext, quest_id: str):
         command = QuestCommand(self.bot, ctx, "cancel", quest_id)
+        await command.run()
+
+    @interactions.slash_command(
+        name="quete",
+        description="Effectue une action sur les quêtes",
+        scopes=GUILD_IDS,
+        options=[
+            ID_OPTION
+        ],
+        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
+        dm_permission=False,
+        sub_cmd_name="sauvegarder",
+        sub_cmd_description="Annule une quête en cours et sauvegarde son état."
+    )
+    async def quest_cancel_command(self, ctx: interactions.SlashContext, quest_id: str):
+        command = QuestCommand(self.bot, ctx, "save", quest_id)
         await command.run()
 
     @interactions.slash_command(

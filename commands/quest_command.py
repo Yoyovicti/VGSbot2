@@ -14,6 +14,7 @@ class QuestCommand(ItemCommand):
         self.command_map = {
             "add": self.run_add,
             "cancel": self.run_cancel,
+            "save": self.run_save,
             "forward": self.run_forward,
             "backward": self.run_backward
         }
@@ -45,7 +46,7 @@ class QuestCommand(ItemCommand):
             await self.ctx.send("Erreur: La quête est déjà commencée ou terminée.")
             return
 
-        # Add mission to current missions and save
+        # Add quest to current quests and save
         self.quest_inventory.add_quest(self.quest_id)
         self.quest_inventory.save(TEAM_FOLDER, self.team.id)
 
@@ -68,7 +69,7 @@ class QuestCommand(ItemCommand):
             await self.ctx.send("Erreur: La quête n'est pas dans les quêtes en cours ou validées.")
             return
 
-        # Add mission to current missions and save
+        # Cancel quest and save
         self.quest_inventory.cancel_quest(self.quest_id)
         self.quest_inventory.save(TEAM_FOLDER, self.team.id)
 
@@ -80,6 +81,28 @@ class QuestCommand(ItemCommand):
 
         # Confirmation message
         await self.ctx.send(f"Quête {self.quest_id} annulée !")
+
+    async def run_save(self):
+        success = await self.load_team_info()
+        if not success:
+            return
+
+        if self.quest_id not in self.quest_inventory.current:
+            await self.ctx.send("Erreur: La quête n'est pas dans les quêtes en cours.")
+            return
+
+        # Save quest and save
+        self.quest_inventory.save_quest(self.quest_id)
+        self.quest_inventory.save(TEAM_FOLDER, self.team.id)
+
+        # Edit inventory message and send to item channel for current team
+        inv_msg = await self.item_channel.fetch_message(self.quest_inventory.message_id)
+        await inv_msg.edit(content=self.quest_inventory.format_discord(self.team.name))
+        message = f"*La quête {self.quest_id} a été sauvegardée.*"
+        await self.item_channel.send(message)
+
+        # Confirmation message
+        await self.ctx.send(f"Quête {self.quest_id} sauvegardée !")
 
     async def run_forward(self):
         success = await self.load_team_info()
