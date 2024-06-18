@@ -2,12 +2,13 @@ import interactions
 
 from commands.item_command import ItemCommand
 from init_config import TEAM_FOLDER, quest_manager, item_manager
-from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N
+from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS, CROSS_MARK
 from manager.reaction_manager import ReactionManager
 
 
 class QuestCommand(ItemCommand):
-    def __init__(self, bot: interactions.Client, ctx: interactions.SlashContext, param: str, quest_id: str):
+    def __init__(self, bot: interactions.Client, ctx: interactions.SlashContext, param: str, quest_id: str,
+                 enable_save: bool = True, use_slots: bool = False):
         super().__init__(bot, ctx)
         self.quest_inventory = None
 
@@ -21,6 +22,9 @@ class QuestCommand(ItemCommand):
 
         self.param = param
         self.quest_id = quest_id
+
+        self.enable_save = enable_save
+        self.use_slots = use_slots
 
     async def load_team_info(self) -> bool:
         if not await super().load_team_info():
@@ -46,9 +50,37 @@ class QuestCommand(ItemCommand):
             await self.ctx.send("Erreur: La quête est déjà commencée ou terminée.")
             return
 
+        if self.use_slots and len(self.quest_inventory.current) >= self.quest_inventory.n_slot:
+            quest_string = ("Vous n'avez pas de place pour accueillir une nouvelle quête. Si vous désirez remplacer "
+                            "une quête en cours par la nouvelle, veuillez sélectionner la quête à remplacer :\n\n")
+            quest_string += "❌ Garder la quête actuelle\n"
+
+            quest_list = list(self.quest_inventory.current)
+            n_quests = len(quest_list)
+            for i in range(n_quests):
+                quest = quest_list[i]
+                quest_inst = self.quest_inventory.quests[quest]
+                quest_step = self.quest_inventory.current[quest]
+                quest_string += f"{KEYCAP_NUMBERS[i]} {quest_inst.format_discord(quest_step)}"
+            quest_message = await self.item_channel.send(quest_string)
+
+            reaction_choices = [CROSS_MARK] + KEYCAP_NUMBERS[:n_quests]
+            reaction_manager = ReactionManager(quest_message, reaction_choices)
+            selected_reaction = await reaction_manager.run()
+
+            if selected_reaction == CROSS_MARK:
+                cancel_message = "Quête(s) conservée(s) !"
+                await quest_message.reply(cancel_message)
+                await self.ctx.send(cancel_message)
+                return
+
+            replaced_quest = quest_list[KEYCAP_NUMBERS.index(selected_reaction)]
+            self.quest_inventory.save_quest(replaced_quest)
+
         # Add quest to current quests and save
         self.quest_inventory.add_quest(self.quest_id)
-        self.quest_inventory.save(TEAM_FOLDER, self.team.id)
+        if self.enable_save:
+            self.quest_inventory.save(TEAM_FOLDER, self.team.id)
 
         # Edit inventory message and send to item channel for current team
         inv_msg = await self.item_channel.fetch_message(self.quest_inventory.message_id)
@@ -71,7 +103,8 @@ class QuestCommand(ItemCommand):
 
         # Cancel quest and save
         self.quest_inventory.cancel_quest(self.quest_id)
-        self.quest_inventory.save(TEAM_FOLDER, self.team.id)
+        if self.enable_save:
+            self.quest_inventory.save(TEAM_FOLDER, self.team.id)
 
         # Edit inventory message and send to item channel for current team
         inv_msg = await self.item_channel.fetch_message(self.quest_inventory.message_id)
@@ -93,7 +126,8 @@ class QuestCommand(ItemCommand):
 
         # Save quest and save
         self.quest_inventory.save_quest(self.quest_id)
-        self.quest_inventory.save(TEAM_FOLDER, self.team.id)
+        if self.enable_save:
+            self.quest_inventory.save(TEAM_FOLDER, self.team.id)
 
         # Edit inventory message and send to item channel for current team
         inv_msg = await self.item_channel.fetch_message(self.quest_inventory.message_id)
@@ -152,7 +186,8 @@ class QuestCommand(ItemCommand):
 
         # Forward quest and save
         self.quest_inventory.forward(self.quest_id)
-        self.quest_inventory.save(TEAM_FOLDER, self.team.id)
+        if self.enable_save:
+            self.quest_inventory.save(TEAM_FOLDER, self.team.id)
 
         # Edit inventory message and send to item channel for current team
         inv_msg = await self.item_channel.fetch_message(self.quest_inventory.message_id)
@@ -176,7 +211,8 @@ class QuestCommand(ItemCommand):
 
         # Forward quest and save
         self.quest_inventory.backward(self.quest_id)
-        self.quest_inventory.save(TEAM_FOLDER, self.team.id)
+        if self.enable_save:
+            self.quest_inventory.save(TEAM_FOLDER, self.team.id)
 
         # Edit inventory message and send to item channel for current team
         inv_msg = await self.item_channel.fetch_message(self.quest_inventory.message_id)

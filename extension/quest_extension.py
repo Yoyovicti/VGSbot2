@@ -80,7 +80,7 @@ class QuestExtension(interactions.Extension):
         sub_cmd_name="sauvegarder",
         sub_cmd_description="Annule une quête en cours et sauvegarde son état."
     )
-    async def quest_cancel_command(self, ctx: interactions.SlashContext, quest_id: str):
+    async def quest_save_command(self, ctx: interactions.SlashContext, quest_id: str):
         command = QuestCommand(self.bot, ctx, "save", quest_id)
         await command.run()
 
