@@ -3,6 +3,7 @@ import numpy
 from numpy import random
 
 from commands.item_command import ItemCommand
+from commands.mission_command import MissionCommand
 from commands.quest_command import QuestCommand
 from commands.usable_item_command import UsableItemCommand
 from init_config import TEAM_FOLDER, item_manager, roll_manager, team_manager, quest_manager
@@ -46,18 +47,23 @@ class RollItemCommand(ItemCommand):
 
         global_save_item = False
         global_save_quest = False
+        global_save_mission = False
         for _ in range(self.qty):
-            save_item, save_quest = await self.run_roll()
+            save_item, save_quest, save_mission = await self.run_roll()
             if save_item:
                 global_save_item = True
             if save_quest:
                 global_save_quest = True
+            if save_mission:
+                global_save_mission = True
 
         # Save inventory
         if global_save_item:
             self.item_inventory.save(TEAM_FOLDER, self.team.id)
         if global_save_quest:
             self.quest_inventory.save(TEAM_FOLDER, self.team.id)
+        if global_save_mission:
+            self.mission_inventory.save(TEAM_FOLDER, self.team.id)
 
         # Edit inventory message and send to item channel
         inv_msg = await self.item_channel.fetch_message(self.item_inventory.message_id)
@@ -67,6 +73,7 @@ class RollItemCommand(ItemCommand):
         message = "*Aucun objet tiré*\n"
         save_item = False
         save_quest = False
+        save_mission = False
         item = ""
         quest = ""
         mission = ""
@@ -90,17 +97,19 @@ class RollItemCommand(ItemCommand):
                 q_step = 0
                 if quest in self.quest_inventory.saved:
                     q_step = self.quest_inventory.saved[quest]
-                quest_message = f"{self.quest_inventory.quests[quest].format_discord(q_step)}\n"
+                if quest != "":
+                    quest_message = f"{self.quest_inventory.quests[quest].format_discord(q_step)}\n"
             message += quest_message
 
         # Missions
         if self.method.mission_drop > 0:
-            message += "*Pas de mission tirée*"
+            mission_message = "*Pas de mission tirée*"
             mission_rng = random.Generator(random.MT19937())
             if mission_rng.random() < self.method.mission_drop:
                 mission = self.roll_mission()
-                mission_inst = self.mission_inventory.missions[mission]
-                message += f"{mission_inst}\n"
+                if mission != "":
+                    mission_message = f"{self.mission_inventory.missions[mission].format_discord()}\n"
+            message += mission_message
 
         team_message = message
         boss_message = message
@@ -129,6 +138,12 @@ class RollItemCommand(ItemCommand):
             await command.run()
             save_quest = True
 
+        # Mission
+        if mission != "":
+            command = MissionCommand(self.bot, self.ctx, "add", mission, enable_save=False, use_slots=True)
+            await command.run()
+            save_mission = True
+
         if enable_charm and self.charm:
             charm_rng = random.Generator(random.MT19937())
             if charm_rng.random() < self.method.charm_roll:
@@ -136,10 +151,15 @@ class RollItemCommand(ItemCommand):
                 await self.item_channel.send(message)
                 await self.ctx.send(message)
 
-                if await self.run_roll(enable_charm=False):
+                charm_save_item, charm_save_quest, charm_save_mission = await self.run_roll(enable_charm=False)
+                if charm_save_item:
                     save_item = True
+                if charm_save_quest:
+                    save_quest = True
+                if charm_save_mission:
+                    save_mission = True
 
-        return save_item, save_quest
+        return save_item, save_quest, save_mission
 
     def roll_item(self) -> str:
         pos_index = self.position - 1
@@ -151,7 +171,6 @@ class RollItemCommand(ItemCommand):
                 total_qty = self.item_inventory.quantity(item) + self.item_inventory.quantity(item, safe=True)
                 if total_qty >= max_capacity:
                     continue
-
             valid_items.append(item)
 
         # Compute weights (fix weights when some items are not valid)
@@ -176,7 +195,17 @@ class RollItemCommand(ItemCommand):
         return rng.choice(valid_quests)
 
     def roll_mission(self) -> str:
-        pass
+        valid_missions = []
+        for mission in self.mission_inventory.missions:
+            if mission in self.mission_inventory.current or mission in self.mission_inventory.completed:
+                continue
+            valid_missions.append(mission)
+
+        if len(valid_missions) <= 0:
+            return ""
+
+        rng = random.Generator(random.MT19937())
+        return rng.choice(valid_missions)
 
     async def run_champi(self):
         # TODO merge with champi command

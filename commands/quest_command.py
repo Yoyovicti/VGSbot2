@@ -7,8 +7,8 @@ from manager.reaction_manager import ReactionManager
 
 
 class QuestCommand(ItemCommand):
-    def __init__(self, bot: interactions.Client, ctx: interactions.SlashContext, param: str, quest_id: str,
-                 enable_save: bool = True, use_slots: bool = False):
+    def __init__(self, bot: interactions.Client, ctx: interactions.SlashContext, param: str, quest_id: str = "",
+                 n_slot: int = 1, enable_save: bool = True, use_slots: bool = False):
         super().__init__(bot, ctx)
         self.quest_inventory = None
 
@@ -17,11 +17,13 @@ class QuestCommand(ItemCommand):
             "cancel": self.run_cancel,
             "save": self.run_save,
             "forward": self.run_forward,
-            "backward": self.run_backward
+            "backward": self.run_backward,
+            "slot": self.run_slot
         }
 
         self.param = param
         self.quest_id = quest_id
+        self.n_slot = n_slot
 
         self.enable_save = enable_save
         self.use_slots = use_slots
@@ -53,7 +55,7 @@ class QuestCommand(ItemCommand):
         if self.use_slots and len(self.quest_inventory.current) >= self.quest_inventory.n_slot:
             quest_string = ("Vous n'avez pas de place pour accueillir une nouvelle quête. Si vous désirez remplacer "
                             "une quête en cours par la nouvelle, veuillez sélectionner la quête à remplacer :\n\n")
-            quest_string += "❌ Garder la quête actuelle\n"
+            quest_string += "❌ Garder la ou les quêtes actuelles\n"
 
             quest_list = list(self.quest_inventory.current)
             n_quests = len(quest_list)
@@ -85,11 +87,11 @@ class QuestCommand(ItemCommand):
         # Edit inventory message and send to item channel for current team
         inv_msg = await self.item_channel.fetch_message(self.quest_inventory.message_id)
         await inv_msg.edit(content=self.quest_inventory.format_discord(self.team.name))
-        message = f"*La quête {self.quest_id} a été ajoutée aux missions en cours.*"
+        message = f"*La quête {self.quest_id} a été ajoutée aux quêtes en cours.*"
         await self.item_channel.send(message)
 
         # Confirmation message
-        await self.ctx.send(f"Quête {self.quest_id} ajoutée aux missions en cours !")
+        await self.ctx.send(f"Quête {self.quest_id} ajoutée aux quêtes en cours !")
 
     async def run_cancel(self):
         success = await self.load_team_info()
@@ -221,3 +223,37 @@ class QuestCommand(ItemCommand):
         # Send messages
         await self.item_channel.send(team_message)
         await self.ctx.send(boss_message)
+
+    async def run_slot(self):
+        success = await self.load_team_info()
+        if not success:
+            return
+
+        if self.n_slot == self.quest_inventory.n_slot:
+            await self.ctx.send(f"Erreur: Le nombre de slots de quêtes est déjà de {self.n_slot}.")
+            return
+
+        if self.n_slot < len(self.quest_inventory.current):
+            warning_msg = await self.ctx.send("Cette opération va supprimer et sauvegarder la dernière quête ajoutée.\n"
+                                              "Souhaitez-vous continuer ?")
+            reaction_manager = ReactionManager(warning_msg, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
+            reaction = await reaction_manager.run()
+            if reaction != REGIONAL_INDICATOR_O:
+                await self.ctx.send("Opération annulée.")
+                return
+
+            # Save last added quest
+            self.quest_inventory.save_quest(list(self.quest_inventory.current)[-1])
+
+            # Edit inventory message
+            inv_msg = await self.item_channel.fetch_message(self.quest_inventory.message_id)
+            await inv_msg.edit(content=self.quest_inventory.format_discord(self.team.name))
+
+        self.quest_inventory.n_slot = self.n_slot
+        if self.enable_save:
+            self.quest_inventory.save(TEAM_FOLDER, self.team.id)
+
+        # Send messages
+        message = f"*Le nombre de slots pour les quêtes est passé à {self.n_slot}*"
+        await self.item_channel.send(message)
+        await self.ctx.send(message)

@@ -2,23 +2,29 @@ import interactions
 
 from commands.item_command import ItemCommand
 from init_config import TEAM_FOLDER, mission_manager
-from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS
+from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS, CROSS_MARK
 from manager.reaction_manager import ReactionManager
 
 
 class MissionCommand(ItemCommand):
-    def __init__(self, bot: interactions.Client, ctx: interactions.SlashContext, param: str, mission_id: str):
+    def __init__(self, bot: interactions.Client, ctx: interactions.SlashContext, param: str, mission_id: str = "",
+                 n_slot: int = 3, enable_save: bool = True, use_slots: bool = False):
         super().__init__(bot, ctx)
         self.mission_inventory = None
 
         self.command_map = {
             "add": self.run_add,
             "complete": self.run_complete,
-            "cancel": self.run_cancel
+            "cancel": self.run_cancel,
+            "slot": self.run_slot
         }
 
         self.param = param
         self.mission_id = mission_id
+
+        self.enable_save = enable_save
+        self.use_slots = use_slots
+        self.n_slot = n_slot
 
     async def load_team_info(self) -> bool:
         if not await super().load_team_info():
@@ -44,9 +50,36 @@ class MissionCommand(ItemCommand):
             await self.ctx.send("Erreur: La mission est déjà en cours.")
             return
 
+        if self.use_slots and len(self.mission_inventory.current) >= self.mission_inventory.n_slot:
+            mission_string = (
+                "Vous n'avez pas de place pour accueillir une nouvelle mission. Si vous désirez remplacer "
+                "une mission en cours par la nouvelle, veuillez sélectionner la mission à remplacer :\n\n")
+            mission_string += "❌ Garder les missions actuelles\n"
+
+            n_missions = len(self.mission_inventory.current)
+            for i in range(n_missions):
+                mission = self.mission_inventory.current[i]
+                mission_inst = self.mission_inventory.missions[mission]
+                mission_string += f"{KEYCAP_NUMBERS[i]} {mission_inst.format_discord()}\n"
+            mission_message = await self.item_channel.send(mission_string)
+
+            reaction_choices = [CROSS_MARK] + KEYCAP_NUMBERS[:n_missions]
+            reaction_manager = ReactionManager(mission_message, reaction_choices)
+            selected_reaction = await reaction_manager.run()
+
+            if selected_reaction == CROSS_MARK:
+                cancel_message = "Missions conservées !"
+                await mission_message.reply(cancel_message)
+                await self.ctx.send(cancel_message)
+                return
+
+            replaced_mission = self.mission_inventory.current[KEYCAP_NUMBERS.index(selected_reaction)]
+            self.mission_inventory.cancel_mission(replaced_mission)
+
         # Add mission to current missions and save
         self.mission_inventory.add_mission(self.mission_id)
-        self.mission_inventory.save(TEAM_FOLDER, self.team.id)
+        if self.enable_save:
+            self.mission_inventory.save(TEAM_FOLDER, self.team.id)
 
         # Edit inventory message and send to item channel for current team
         inv_msg = await self.item_channel.fetch_message(self.mission_inventory.message_id)
@@ -120,7 +153,8 @@ class MissionCommand(ItemCommand):
 
         # Add mission to completed missions and save
         self.mission_inventory.complete_mission(self.mission_id)
-        self.mission_inventory.save(TEAM_FOLDER, self.team.id)
+        if self.enable_save:
+            self.mission_inventory.save(TEAM_FOLDER, self.team.id)
 
         # Edit mission inventory message
         mission_inv_msg = await self.item_channel.fetch_message(self.mission_inventory.message_id)
@@ -141,7 +175,8 @@ class MissionCommand(ItemCommand):
 
         # Add mission to current missions and save
         self.mission_inventory.cancel_mission(self.mission_id)
-        self.mission_inventory.save(TEAM_FOLDER, self.team.id)
+        if self.enable_save:
+            self.mission_inventory.save(TEAM_FOLDER, self.team.id)
 
         # Edit inventory message and send to item channel for current team
         inv_msg = await self.item_channel.fetch_message(self.mission_inventory.message_id)
@@ -151,3 +186,37 @@ class MissionCommand(ItemCommand):
 
         # Confirmation message
         await self.ctx.send(f"Mission {self.mission_id} annulée !")
+
+    async def run_slot(self):
+        success = await self.load_team_info()
+        if not success:
+            return
+
+        if self.n_slot == self.mission_inventory.n_slot:
+            await self.ctx.send(f"Erreur: Le nombre de slots de missions est déjà de {self.n_slot}.")
+            return
+
+        if self.n_slot < len(self.mission_inventory.current):
+            warning_msg = await self.ctx.send("Cette opération va supprimer et sauvegarder la dernière mission "
+                                              "ajoutée.\nSouhaitez-vous continuer ?")
+            reaction_manager = ReactionManager(warning_msg, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
+            reaction = await reaction_manager.run()
+            if reaction != REGIONAL_INDICATOR_O:
+                await self.ctx.send("Opération annulée.")
+                return
+
+            # Cancel last mission added
+            self.mission_inventory.cancel_mission(self.mission_inventory.current[-1])
+
+            # Edit inventory message
+            inv_msg = await self.item_channel.fetch_message(self.mission_inventory.message_id)
+            await inv_msg.edit(content=self.mission_inventory.format_discord(self.team.name))
+
+        self.mission_inventory.n_slot = self.n_slot
+        if self.enable_save:
+            self.mission_inventory.save(TEAM_FOLDER, self.team.id)
+
+        # Send messages
+        message = f"*Le nombre de slots pour les missions est passé à {self.n_slot}*"
+        await self.item_channel.send(message)
+        await self.ctx.send(message)
