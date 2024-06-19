@@ -14,6 +14,7 @@ class MissionInventory(Inventory):
 
         self.current = []
         self.completed = []
+        self.n_slot = 3
 
     def init(self, message_id: str):
         self.message_id = message_id
@@ -31,6 +32,7 @@ class MissionInventory(Inventory):
     def clear(self):
         self.current = []
         self.completed = []
+        self.n_slot = 3
 
     def load(self, base_path: str, team_name: str):
         folder_path = os.path.join(base_path, team_name)
@@ -67,12 +69,14 @@ class MissionInventory(Inventory):
         self.message_id = json_data["message_id"]
         self.current = json_data["current"]
         self.completed = json_data["completed"]
+        self.n_slot = json_data["n_slot"]
 
     def serialize(self) -> str:
         data = {
             "message_id": self.message_id,
             "current": self.current,
-            "completed": self.completed
+            "completed": self.completed,
+            "n_slot": self.n_slot
         }
         return json.dumps(data, indent=4)
 

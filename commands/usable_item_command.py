@@ -237,6 +237,7 @@ class UsableItemCommand(ItemCommand):
             return
 
         should_save = False
+        await self.item_channel.send(f"<@&{self.team.role_id}>")
         for _ in range(self.qty):
             if await self.run_cadoizo(self.gold):
                 should_save = True
@@ -303,6 +304,7 @@ class UsableItemCommand(ItemCommand):
             contents = roll_manager.gold_cadoizo[choice]
             result_message = (f"*Lot obtenu :* {choice}\n"
                               f"*Objet(s) obtenus :*\n")
+            boss_mention = False
 
             for elem in contents:
                 elem_item = elem["item"]
@@ -315,10 +317,14 @@ class UsableItemCommand(ItemCommand):
                     should_save = True
                     continue
 
-                # TODO process carapace + eclair for gold cadoizo
+                if elem_item == "carapacebleue" or elem_item == "eclair":
+                    boss_mention = True
 
             await cadoizo_message.reply(contents_message + result_message)
-            await self.ctx.send(result_message)
+            boss_message = result_message
+            if boss_mention:
+                boss_message += team_manager.get_boss_mention()
+            await self.ctx.send(boss_message)
 
             # Process instant Cadoizo in kit:
             for elem in contents:
@@ -334,10 +340,17 @@ class UsableItemCommand(ItemCommand):
             self.item_inventory.add(choice)
             should_save = True
 
+        boss_mention = False
+        if choice == "carapacebleue" or choice == "eclair":
+            boss_mention = True
+
         # Send result message
         result_message = f"*Objet obtenu :* {item_manager.items[choice].get_emoji()}"
         await cadoizo_message.reply(contents_message + result_message)
-        await self.ctx.send(result_message)
+        boss_message = result_message
+        if boss_mention:
+            boss_message += team_manager.get_boss_mention()
+        await self.ctx.send(boss_message)
         return should_save
 
     async def run_champi_command(self):

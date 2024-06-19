@@ -62,7 +62,7 @@ class QuestExtension(interactions.Extension):
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False,
         sub_cmd_name="annuler",
-        sub_cmd_description="Annuler une quête en cours ou validée."
+        sub_cmd_description="Annuler une quête en cours ou validée sans sauvegarder"
     )
     async def quest_cancel_command(self, ctx: interactions.SlashContext, quest_id: str):
         command = QuestCommand(self.bot, ctx, "cancel", quest_id)
@@ -77,8 +77,24 @@ class QuestExtension(interactions.Extension):
         ],
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False,
+        sub_cmd_name="sauvegarder",
+        sub_cmd_description="Annule une quête en cours et sauvegarde son état"
+    )
+    async def quest_save_command(self, ctx: interactions.SlashContext, quest_id: str):
+        command = QuestCommand(self.bot, ctx, "save", quest_id)
+        await command.run()
+
+    @interactions.slash_command(
+        name="quete",
+        description="Effectue une action sur les quêtes",
+        scopes=GUILD_IDS,
+        options=[
+            ID_OPTION
+        ],
+        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
+        dm_permission=False,
         sub_cmd_name="avancer",
-        sub_cmd_description="Avancer une quête à l'étape suivante."
+        sub_cmd_description="Avancer une quête à l'étape suivante"
     )
     async def quest_forward_command(self, ctx: interactions.SlashContext, quest_id: str):
         command = QuestCommand(self.bot, ctx, "forward", quest_id)
@@ -94,8 +110,32 @@ class QuestExtension(interactions.Extension):
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False,
         sub_cmd_name="reculer",
-        sub_cmd_description="Faire revenir une quête à l'étape précédente."
+        sub_cmd_description="Faire revenir une quête à l'étape précédente"
     )
     async def quest_backward_command(self, ctx: interactions.SlashContext, quest_id: str):
         command = QuestCommand(self.bot, ctx, "backward", quest_id)
+        await command.run()
+
+    @interactions.slash_command(
+        name="quete",
+        description="Effectue une action sur les quêtes",
+        scopes=GUILD_IDS,
+        options=[
+            interactions.SlashCommandOption(
+                name="nombre",
+                description="Le nombre de slots pour les quêtes",
+                type=interactions.OptionType.INTEGER,
+                required=True,
+                min_value=1,
+                max_value=2,
+                argument_name="qty"
+            )
+        ],
+        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
+        dm_permission=False,
+        sub_cmd_name="slot",
+        sub_cmd_description="Modifier le nombre de slots pour les quêtes"
+    )
+    async def quest_slot_command(self, ctx: interactions.SlashContext, qty: int):
+        command = QuestCommand(self.bot, ctx, "slot", n_slot=qty)
         await command.run()

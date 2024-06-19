@@ -62,8 +62,32 @@ class ItemExtension(interactions.Extension):
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False,
         sub_cmd_name="annuler",
-        sub_cmd_description="Annuler une mission en cours ou validée."
+        sub_cmd_description="Annuler une mission en cours ou validée"
     )
     async def mission_cancel_command(self, ctx: interactions.SlashContext, mission_id: str):
         command = MissionCommand(self.bot, ctx, "cancel", mission_id)
+        await command.run()
+
+    @interactions.slash_command(
+        name="mission",
+        description="Effectue une action sur les missions",
+        scopes=GUILD_IDS,
+        options=[
+            interactions.SlashCommandOption(
+                name="nombre",
+                description="Le nombre de slots pour les missions",
+                type=interactions.OptionType.INTEGER,
+                required=True,
+                min_value=3,
+                max_value=4,
+                argument_name="qty"
+            )
+        ],
+        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
+        dm_permission=False,
+        sub_cmd_name="slot",
+        sub_cmd_description="Modifier le nombre de slots pour les missions"
+    )
+    async def mission_slot_command(self, ctx: interactions.SlashContext, qty: int):
+        command = MissionCommand(self.bot, ctx, "slot", n_slot=qty)
         await command.run()

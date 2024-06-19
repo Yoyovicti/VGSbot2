@@ -197,7 +197,7 @@ class GimmickInventory(Inventory):
             n_seen = len(self.seen[team])
             if n_seen > 0:
                 string_seen += f"**{team} :** *"
-                for i in range(len(self.seen[team])):
+                for i in range(n_seen):
                     if i > 0:
                         string_seen += ", "
                     gimmick = self.seen[team][i]
