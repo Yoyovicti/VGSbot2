@@ -1,7 +1,6 @@
 import interactions
 
 from commands.classic_item_command import ClassicItemCommand
-from commands.gimmick_item_command import GimmickItemCommand
 from commands.roll_item_command import RollItemCommand
 from commands.usable_item_command import UsableItemCommand
 from init_config import GUILD_IDS, item_manager, team_manager, roll_manager
@@ -182,7 +181,8 @@ class ItemExtension(interactions.Extension):
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False
     )
-    async def tirage_command(self, ctx: interactions.SlashContext, method: str, pos: int, qty: int = 1, charm: str = "non"):
+    async def tirage_command(self, ctx: interactions.SlashContext, method: str, pos: int, qty: int = 1,
+                             charm: str = "non"):
         command = RollItemCommand(self.bot, ctx, method, pos, qty=qty, charm=(charm == "oui"))
         await command.run()
 
@@ -326,8 +326,8 @@ class ItemExtension(interactions.Extension):
     )
     async def clairvoyance_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                                    stealable: str = "oui"):
-        command = GimmickItemCommand(self.bot, ctx, param="clairvoyance", qty=qty, gold=(gold == "oui"),
-                                     safe=(stealable == "non"))
+        command = UsableItemCommand(self.bot, ctx, param="clairvoyance", qty=qty, gold=(gold == "oui"),
+                                    safe=(stealable == "non"))
         await command.run()
 
     @interactions.slash_command(
@@ -362,9 +362,7 @@ class ItemExtension(interactions.Extension):
     )
     async def ar_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
                          stealable: str = "oui"):
-        # TODO ask for which gold item to use
-        command = ClassicItemCommand(self.bot, ctx, "ar", param="remove", qty=qty, gold=(gold == "oui"),
-                                     safe=(stealable == "non"))
+        command = UsableItemCommand(self.bot, ctx, param="ar", qty=qty, gold=(gold == "oui"), safe=(stealable == "non"))
         await command.run()
 
     @interactions.slash_command(

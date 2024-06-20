@@ -34,6 +34,7 @@ with open(BOO_NAMES_PATH, "r") as boo_names_file:
         BOO_NAMES.append(boo_name.rstrip())
 
 ORBE_SUCCESS_RATE = 0.5
+GOLD_ORBE_SUCCESS_RATE = 0.25
 
 # Load Managers (Items, Missions, Gimmicks, Teams, Roll)
 item_manager = ItemManager(VGS_FOLDER)

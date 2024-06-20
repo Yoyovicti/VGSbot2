@@ -2,11 +2,12 @@ import warnings
 
 
 class Item:
-    def __init__(self, item_id, name: str, stealable: bool, max_capacity: int, instant: bool, hidden: bool,
+    def __init__(self, item_id, name: str, stealable: bool, transform_gold: bool, max_capacity: int, instant: bool, hidden: bool,
                  emote_id: str, gold_emote_id: str):
         self.id = item_id
         self.name = name
         self.stealable = stealable
+        self.transform_gold = transform_gold
         self.max_capacity = max_capacity
         self.instant = instant
         self.hidden = hidden

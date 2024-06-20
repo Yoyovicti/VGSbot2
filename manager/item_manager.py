@@ -12,9 +12,9 @@ class ItemManager:
 
             print("===== ItemManager =====")
             for item in items_file:
-                item_id, name, stealable, max_capacity, instant, hidden, emote_id, gold_emote_id = item.split()
+                item_id, name, stealable, transform_gold, max_capacity, instant, hidden, emote_id, gold_emote_id = item.split()
                 name = name.replace("_", " ")
 
-                item_inst = Item(item_id, name, bool(int(stealable)), int(max_capacity), bool(int(instant)), bool(int(hidden)), emote_id, gold_emote_id)
+                item_inst = Item(item_id, name, bool(int(stealable)), bool(int(transform_gold)), int(max_capacity), bool(int(instant)), bool(int(hidden)), emote_id, gold_emote_id)
                 self.items[item_id] = item_inst
                 print(f"Loaded item: {item_inst}")
