@@ -46,7 +46,7 @@ class QuestExtension(interactions.Extension):
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False,
         sub_cmd_name="valider",
-        sub_cmd_description="Valider une quête"
+        sub_cmd_description="Valider une quête directement sans distribuer les récompenses intermédiaires"
     )
     async def quest_complete_command(self, ctx: interactions.SlashContext, quest_id: str):
         command = QuestCommand(self.bot, ctx, "complete", quest_id)

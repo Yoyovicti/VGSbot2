@@ -1,7 +1,9 @@
 import interactions
+import numpy as np
+from numpy import random
 
 from commands.item_command import ItemCommand
-from init_config import TEAM_FOLDER, quest_manager, item_manager
+from init_config import TEAM_FOLDER, quest_manager, item_manager, roll_manager
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS, CROSS_MARK
 from manager.reaction_manager import ReactionManager
 
@@ -15,6 +17,7 @@ class QuestCommand(ItemCommand):
         self.command_map = {
             "add": self.run_add,
             "cancel": self.run_cancel,
+            "complete": self.run_complete,
             "save": self.run_save,
             "forward": self.run_forward,
             "backward": self.run_backward,
@@ -117,6 +120,61 @@ class QuestCommand(ItemCommand):
         # Confirmation message
         await self.ctx.send(f"Quête {self.quest_id} annulée !")
 
+    async def run_complete(self):
+        success = await self.load_team_info()
+        if not success:
+            return
+
+        if self.quest_id in self.quest_inventory.completed:
+            await self.ctx.send("Erreur: La quête est déjà complétée.")
+            return
+
+        team_message = f"*La quête {self.quest_id} a été mise à jour.*"
+        boss_message = f"Quête {self.quest_id} mise à jour !"
+        skip_reward = False
+
+        message = await self.ctx.send("Donner une récompense aux participants ?")
+        reaction_manager = ReactionManager(message, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
+        reaction = await reaction_manager.run()
+        if reaction != REGIONAL_INDICATOR_O:
+            skip_reward = True
+
+        if not skip_reward:
+            reward_str = f"Félicitations pour avoir complété la quête {self.quest_id} !\n"
+            should_save = False
+
+            # Quest completed
+            reward_str += "Vous obtenez :\n"
+            item_reward = quest_manager.quests[self.quest_id].reward.item_reward
+            for item in item_reward:
+                for i in range(2):
+                    if item_reward[item][i] > 0:
+                        if i == 1 or not item_manager.items[item].instant:
+                            self.item_inventory.add(item, qty=item_reward[item][i], gold=(i == 1))
+                            should_save = True
+                        reward_str += f"{item_manager.items[item].get_emoji(i == 1)} x{item_reward[item][i]}\n"
+
+            if should_save:
+                self.item_inventory.save(TEAM_FOLDER, self.team.id)
+                # Edit item inventory message
+                item_inv_msg = await self.item_channel.fetch_message(self.item_inventory.message_id)
+                await item_inv_msg.edit(content=self.item_inventory.format_discord(self.team.name))
+
+            await self.item_channel.send(reward_str)
+
+        # Forward quest and save
+        self.quest_inventory.complete_quest(self.quest_id)
+        if self.enable_save:
+            self.quest_inventory.save(TEAM_FOLDER, self.team.id)
+
+        # Edit inventory message and send to item channel for current team
+        inv_msg = await self.item_channel.fetch_message(self.quest_inventory.message_id)
+        await inv_msg.edit(content=self.quest_inventory.format_discord(self.team.name))
+
+        # Send messages
+        await self.item_channel.send(team_message)
+        await self.ctx.send(boss_message)
+
     async def run_save(self):
         success = await self.load_team_info()
         if not success:
@@ -154,37 +212,66 @@ class QuestCommand(ItemCommand):
             return
 
         curr_step = self.quest_inventory.current[self.quest_id]
-        item_reward = quest_manager.quests[self.quest_id].steps[curr_step].reward.item_reward
 
         team_message = f"*La quête {self.quest_id} a été mise à jour.*"
         boss_message = f"Quête {self.quest_id} mise à jour !"
-        if item_reward:
-            skip_reward = False
+        skip_reward = False
 
-            message = await self.ctx.send("Donner la récompense aux participants ?")
-            reaction_manager = ReactionManager(message, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
-            reaction = await reaction_manager.run()
-            if reaction != REGIONAL_INDICATOR_O:
-                skip_reward = True
+        message = await self.ctx.send("Donner une récompense aux participants ?")
+        reaction_manager = ReactionManager(message, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
+        reaction = await reaction_manager.run()
+        if reaction != REGIONAL_INDICATOR_O:
+            skip_reward = True
 
-            if not skip_reward:
-                reward_str = f"Félicitations pour avoir complété l'étape {curr_step + 1} de la quête {self.quest_id} !\n"
-                should_save = False
+        if not skip_reward:
+            reward_str = f"Félicitations pour avoir complété l'étape {curr_step + 1} de la quête {self.quest_id} !\n"
+            should_save = False
+
+            # Quest completed
+            if curr_step + 1 >= len(quest_manager.quests[self.quest_id].steps):
+                reward_str = f"Félicitations pour avoir complété la quête {self.quest_id} !\n"
                 reward_str += "Vous obtenez :\n"
+                item_reward = quest_manager.quests[self.quest_id].reward.item_reward
                 for item in item_reward:
                     for i in range(2):
                         if item_reward[item][i] > 0:
                             if i == 1 or not item_manager.items[item].instant:
                                 self.item_inventory.add(item, qty=item_reward[item][i], gold=(i == 1))
                                 should_save = True
-                            reward_str += f"{item_manager.items[item].get_emoji(i == 1)}x{item_reward[item][i]}\n"
-                if should_save:
-                    self.item_inventory.save(TEAM_FOLDER, self.team.id)
-                    # Edit item inventory message
-                    item_inv_msg = await self.item_channel.fetch_message(self.item_inventory.message_id)
-                    await item_inv_msg.edit(content=self.item_inventory.format_discord(self.team.name))
+                            reward_str += f"{item_manager.items[item].get_emoji(i == 1)} x{item_reward[item][i]}\n"
 
-                await self.item_channel.send(reward_str)
+            else:
+                # Roll according to Cadoizo drops
+                valid_items = []
+                for item in item_manager.items:
+                    instant = item_manager.items[item].instant
+                    if instant:
+                        continue
+                    max_capacity = item_manager.items[item].max_capacity
+                    if max_capacity >= 0:
+                        total_qty = self.item_inventory.quantity(item) + self.item_inventory.quantity(item, safe=True)
+                        if total_qty >= max_capacity:
+                            continue
+                    valid_items.append(item)
+
+                # Compute weights (fix weights to account for non-valid items)
+                weights = [roll_manager.item_drops[item].cado for item in valid_items]
+                probs = np.array(weights) * 1 / sum(weights)
+
+                rng = random.Generator(random.MT19937())
+                item = rng.choice(valid_items, p=probs)
+
+                reward_str += f"Vous obtenez : {item_manager.items[item].get_emoji()}"
+                self.item_inventory.add(item)
+                should_save = True
+
+            if should_save:
+                self.item_inventory.save(TEAM_FOLDER, self.team.id)
+                # Edit item inventory message
+                item_inv_msg = await self.item_channel.fetch_message(self.item_inventory.message_id)
+                await item_inv_msg.edit(content=self.item_inventory.format_discord(self.team.name))
+
+            await self.item_channel.send(reward_str)
 
         # Forward quest and save
         self.quest_inventory.forward(self.quest_id)

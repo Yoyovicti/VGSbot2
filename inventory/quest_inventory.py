@@ -67,6 +67,14 @@ class QuestInventory(Inventory):
         if quest_id in self.saved:
             self.saved.pop(quest_id)
 
+    def complete_quest(self, quest_id: str):
+        if quest_id in self.current:
+            self.current.pop(quest_id)
+        if quest_id in self.saved:
+            self.saved.pop(quest_id)
+        self.completed.append(quest_id)
+
+
     def save_quest(self, quest_id: str):
         if quest_id in self.current:
             self.saved[quest_id] = self.current.pop(quest_id)

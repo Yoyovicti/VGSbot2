@@ -18,15 +18,15 @@ class QuestManager:
             for quest in data:
                 name = data[quest]["name"]
                 steps_data = data[quest]["steps"]
+                reward = ItemReward(data[quest]["reward"], items)
 
                 steps = []
                 for step_elem in steps_data:
                     story = step_elem["story"]
                     description = step_elem["description"]
-                    reward = ItemReward(step_elem["reward"], items)
-                    step = QuestStep(story, description, reward)
+                    step = QuestStep(story, description)
 
                     steps.append(step)
 
-                self.quests[quest] = Quest(quest, name, steps)
+                self.quests[quest] = Quest(quest, name, steps, reward)
                 print(f"Loaded quest id: {quest}")
