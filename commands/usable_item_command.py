@@ -34,7 +34,6 @@ class UsableItemCommand(ItemCommand):
 
         self.enable_save = enable_save
 
-
     async def load_team_info(self) -> bool:
         if not await super().load_team_info():
             return False
@@ -123,7 +122,7 @@ class UsableItemCommand(ItemCommand):
         # Confirmation message
         await self.ctx.send(f"{item_manager.items['boo'].get_emoji(self.gold)} Inventaires mis à jour !")
 
-    async def run_boo(self, gold: bool = False, remove_boo: bool = True):
+    async def run_boo(self, gold: bool = False, remove_boo: bool = True, cancel_option: bool = True):
         # Load valid teams
         valid_teams = []
         for team in team_manager.teams:
@@ -138,21 +137,23 @@ class UsableItemCommand(ItemCommand):
         if gold:
             n_loop = len(valid_teams)
 
-        while n_loop > 0:
+        for c in range(n_loop):
             # Select item
             item_emojis = await self.get_valid_boo_target_items()
             item_select_string = "Veuillez sélectionner l'objet que vous désirez voler :"
             item_select_message = await self.item_channel.send(item_select_string)
             await self.ctx.send("*En attente du choix des participants...*")
-            item_reaction_manager = ReactionManager(item_select_message, [CROSS_MARK] + item_emojis)
+
+            reaction_list = item_emojis
+            if cancel_option and c <= 0:
+                reaction_list = [CROSS_MARK] + reaction_list
+            item_reaction_manager = ReactionManager(item_select_message, reaction_list)
             target_item = await item_reaction_manager.run()
 
             # Cancel
             if target_item == CROSS_MARK:
                 await item_select_message.reply("Opération annulée.")
                 await self.ctx.send("Opération annulée.")
-                if gold:
-                    continue
                 return
 
             # Select team
@@ -160,16 +161,17 @@ class UsableItemCommand(ItemCommand):
             for i in range(len(valid_teams)):
                 team_select_string += f"{KEYCAP_NUMBERS[i]} {team_manager.teams[valid_teams[i]].name}\n"
             team_select_message = await self.item_channel.send(team_select_string)
-            team_reaction_manager = ReactionManager(team_select_message,
-                                                    [CROSS_MARK] + KEYCAP_NUMBERS[:len(valid_teams)])
+
+            reaction_list = KEYCAP_NUMBERS[:len(valid_teams)]
+            if cancel_option and c <= 0:
+                reaction_list = [CROSS_MARK] + reaction_list
+            team_reaction_manager = ReactionManager(team_select_message, reaction_list)
             selected_reaction = await team_reaction_manager.run()
 
             # Cancel
             if selected_reaction == CROSS_MARK:
                 await team_select_message.reply("Opération annulée.")
                 await self.ctx.send("Opération annulée.")
-                if gold:
-                    continue
                 return
 
             # Remove target from valid teams (for gold boo)
@@ -187,7 +189,7 @@ class UsableItemCommand(ItemCommand):
                 continue
 
             # Remove boo from inventory on last pass
-            if remove_boo and n_loop <= 1:
+            if remove_boo and c >= n_loop - 1:
                 if gold or self.safe:
                     self.item_inventory.remove(self.param, gold=gold, safe=self.safe)
                 else:
@@ -214,7 +216,6 @@ class UsableItemCommand(ItemCommand):
                     # Confirmation message
                     await self.ctx.send(
                         f"{item_manager.items['boo'].get_emoji(gold)} Aucune modification effectuée !")
-                    n_loop -= 1
                     continue
 
                 # Boo successful: set item to send
@@ -246,9 +247,6 @@ class UsableItemCommand(ItemCommand):
             target_msg += f"*, c'est vraiment gentil de votre part ! Allez bisous les nuls héhéhé...*"
             await self.item_channel.send(origin_msg)
             await target_item_channel.send(target_msg)
-
-            # Update loop counter
-            n_loop -= 1
 
     async def get_valid_boo_target_items(self):
         # Get item emojis with corresponding reference to name
@@ -306,7 +304,7 @@ class UsableItemCommand(ItemCommand):
         # Confirmation message
         await self.ctx.send(f"{item_manager.items['clairvoyance'].get_emoji(self.gold)} Inventaires mis à jour !")
 
-    async def run_clairvoyance(self, gold: bool = False, remove_clairvoyance: bool = True):
+    async def run_clairvoyance(self, gold: bool = False, remove_clairvoyance: bool = True, cancel_option: bool = True):
         # Load valid teams
         valid_regions = self.get_valid_clairvoyance_regions(gold)
         valid_teams = list(valid_regions)
@@ -316,23 +314,25 @@ class UsableItemCommand(ItemCommand):
         if gold:
             n_loop = len(valid_teams)
 
-        while n_loop > 0:
+        for c in range(n_loop):
             # Select team
-            team_select_string = "Veuillez sélectionner l'équipe visée:\n\n"
+            team_select_string = (f"{item_manager.items['clairvoyance'].get_emoji(gold)} Veuillez sélectionner "
+                                  f"l'équipe visée:\n\n")
             for i in range(len(valid_teams)):
                 team_select_string += f"{KEYCAP_NUMBERS[i]} {team_manager.teams[valid_teams[i]].name}\n"
             team_select_message = await self.item_channel.send(team_select_string)
             await self.ctx.send("*En attente du choix des participants...*")
-            team_reaction_manager = ReactionManager(team_select_message,
-                                                    [CROSS_MARK] + KEYCAP_NUMBERS[:len(valid_teams)])
+
+            reaction_list = KEYCAP_NUMBERS[:len(valid_teams)]
+            if cancel_option and c <= 0:
+                reaction_list = [CROSS_MARK] + reaction_list
+            team_reaction_manager = ReactionManager(team_select_message, reaction_list)
             selected_reaction = await team_reaction_manager.run()
 
             # Cancel
             if selected_reaction == CROSS_MARK:
                 await team_select_message.reply("Opération annulée.")
                 await self.ctx.send("Opération annulée.")
-                if gold:
-                    continue
                 return
 
             # Remove target from valid teams (for gold clairvoyance)
@@ -350,7 +350,7 @@ class UsableItemCommand(ItemCommand):
                 continue
 
             # Remove clairvoyance from inventory on last pass
-            if remove_clairvoyance and n_loop <= 1:
+            if remove_clairvoyance and c >= n_loop - 1:
                 if gold or self.safe:
                     self.item_inventory.remove(self.param, gold=gold, safe=self.safe)
                 else:
@@ -399,9 +399,6 @@ class UsableItemCommand(ItemCommand):
                           f"Il s'agit de* **{target_inv.gimmicks[selected_region].zone}** ({selected_region})")
             await self.item_channel.send(origin_msg)
             await target_item_channel.send(target_msg)
-
-            # Update loop counter
-            n_loop -= 1
 
     def get_valid_clairvoyance_regions(self, gold: bool) -> Dict[str, List[str]]:
         valid_teams = {}
@@ -506,11 +503,11 @@ class UsableItemCommand(ItemCommand):
 
         # Process Boo
         if target_item == "boo":
-            await self.run_boo(gold=True, remove_boo=False)
+            await self.run_boo(gold=True, remove_boo=False, cancel_option=False)
 
         # Process Clairvoyance
         if target_item == "clairvoyance":
-            await self.run_clairvoyance(gold=True, remove_clairvoyance=False)
+            await self.run_clairvoyance(gold=True, remove_clairvoyance=False, cancel_option=False)
 
             # Save and edit gimmick inventory
             self.gimmick_inventory.save(TEAM_FOLDER, self.team.id)
