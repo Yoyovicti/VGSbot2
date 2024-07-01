@@ -90,7 +90,7 @@ class RollItemCommand(ItemCommand):
 
         # Quests
         if self.method.quest_drop > 0:
-            quest_message = "*Pas de quête tirée*"
+            quest_message = "*Pas de quête tirée*\n"
             quest_rng = random.Generator(random.MT19937())
             if quest_rng.random() < self.method.quest_drop:
                 quest = self.roll_quest()
@@ -103,7 +103,7 @@ class RollItemCommand(ItemCommand):
 
         # Missions
         if self.method.mission_drop > 0:
-            mission_message = "*Pas de mission tirée*"
+            mission_message = "*Pas de mission tirée*\n"
             mission_rng = random.Generator(random.MT19937())
             if mission_rng.random() < self.method.mission_drop:
                 mission = self.roll_mission()

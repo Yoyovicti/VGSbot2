@@ -4,17 +4,14 @@ from commands.mission_command import MissionCommand
 from init_config import GUILD_IDS, mission_manager
 
 
-class ItemExtension(interactions.Extension):
+class MissionExtension(interactions.Extension):
     ID_OPTION = interactions.SlashCommandOption(
         name="mission",
         description="Le numéro de la mission",
         type=interactions.OptionType.STRING,
+        autocomplete=True,
         required=True,
-        argument_name="mission_id",
-        choices=[
-            interactions.SlashCommandChoice(name=mission_manager.missions[m_id], value=m_id)
-            for m_id in mission_manager.missions
-        ]
+        argument_name="mission_id"
     )
 
     def __init__(self, bot: interactions.Client):
@@ -91,3 +88,15 @@ class ItemExtension(interactions.Extension):
     async def mission_slot_command(self, ctx: interactions.SlashContext, qty: int):
         command = MissionCommand(self.bot, ctx, "slot", n_slot=qty)
         await command.run()
+
+    @mission_add_command.autocomplete("mission")
+    @mission_complete_command.autocomplete("mission")
+    @mission_cancel_command.autocomplete("mission")
+    async def autocomplete(self, ctx: interactions.AutocompleteContext):
+        str_input = ctx.input_text
+        choices = [
+            interactions.SlashCommandChoice(name=mission_manager.missions[m_id], value=m_id)
+            for m_id in mission_manager.missions
+            if m_id.startswith(str_input)
+        ]
+        await ctx.send(choices[:25])
