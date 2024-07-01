@@ -1,4 +1,8 @@
+import interactions
 import os.path
+import pytz
+import datetime
+import zipfile
 
 
 def load(folder_path: str, file_name: str) -> str:
@@ -44,6 +48,19 @@ def delete(folder_path: str, file_name: str):
         print(f"SaveManager: Failed to delete file at {file_path}: {e}")
 
 
-# def file_exists(folder_path: str, file_name: str) -> bool:
-#     file_path = os.path.join(folder_path, file_name)
-#     return os.path.exists(file_path)
+async def backup_data(ctx: interactions.SlashContext, folder_path: str):
+    timezone = pytz.timezone("Europe/Paris")
+    curr_time = datetime.datetime.now(timezone).strftime("%Y%m%d_%H%M%S")
+    zip_filename = f"data_{curr_time}.zip"
+    # await utils.send_ctx_message(ctx, f"Creating zip as {zip_filename}...")
+
+    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(folder_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                zipf.write(file_path, os.path.relpath(file_path, folder_path))
+
+    file = interactions.File(zip_filename)
+    await ctx.send(files=[file])
+    # await bot._http.create_message(payload={}, channel_id=ctx.channel_id, files=[file])
+    os.remove(zip_filename)
