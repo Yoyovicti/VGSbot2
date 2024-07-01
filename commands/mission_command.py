@@ -113,7 +113,7 @@ class MissionCommand(ItemCommand):
             reward_str = (f"Félicitations pour avoir complété la mission {self.mission_id} !\n"
                           f"Plusieurs récompenses s'offrent à vous. Choisissez bien !\n\n")
             reward = mission_manager.missions[self.mission_id].reward
-            n_rewards = len(reward.item_reward) + 1
+            n_rewards = len(reward.items) + 1
             for i in range(n_rewards):
                 reward_str += f"{KEYCAP_NUMBERS[i]} "
                 if i == 0:
@@ -122,7 +122,7 @@ class MissionCommand(ItemCommand):
                         continue
                     reward_str += f"{reward.points} points\n"
                     continue
-                reward_str += f"{reward.item_reward[i - 1]}\n"
+                reward_str += f"{reward.items[i - 1]}\n"
 
             reward_msg = await self.item_channel.send(reward_str)
             reaction_manager = ReactionManager(reward_msg, KEYCAP_NUMBERS[:n_rewards])
@@ -138,7 +138,7 @@ class MissionCommand(ItemCommand):
                 boss_message = f"Mission {self.mission_id} validée, inventaire mis à jour !"
 
                 # Add items to inventory and save
-                item_reward = reward.item_reward[r_index - 1]
+                item_reward = reward.items[r_index - 1]
                 for item in item_reward.item_reward:
                     for i in range(2):
                         self.item_inventory.add(item, qty=item_reward.item_reward[item][i], gold=(i == 1))
