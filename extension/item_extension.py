@@ -411,3 +411,21 @@ class ItemExtension(interactions.Extension):
         command = ClassicItemCommand(self.bot, ctx, "paopou", param="remove", qty=qty, gold=(gold == "oui"),
                                      safe=(stealable == "non"))
         await command.run()
+
+    @interactions.slash_command(
+        name="fleurdegel",
+        description="Utilise une Fleur de Gel",
+        scopes=GUILD_IDS,
+        options=[
+            QTY_OPTION,
+            GOLD_OPTION,
+            SAFE_OPTION
+        ],
+        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
+        dm_permission=False
+    )
+    async def fleurdegel_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
+                                 stealable: str = "oui"):
+        command = ClassicItemCommand(self.bot, ctx, "fleurdegel", param="remove", qty=qty, gold=(gold == "oui"),
+                                     safe=(stealable == "non"))
+        await command.run()
