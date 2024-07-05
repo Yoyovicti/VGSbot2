@@ -20,8 +20,8 @@ class MissionManager:
 
                 reward_data = data[mission]["reward"]
                 points = reward_data["points"]
-                items = [ItemReward(item, items) for item in reward_data["items"]]
-                reward = Reward(points, items)
+                item_rewards = [ItemReward(item, items) for item in reward_data["items"]]
+                reward = Reward(points, item_rewards)
 
                 self.missions[mission] = Mission(mission, name, description, reward)
                 print(f"Loaded mission id: {mission}")
