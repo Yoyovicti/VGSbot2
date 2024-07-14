@@ -567,7 +567,7 @@ class UsableItemCommand(ItemCommand):
 
         if selected_reaction == CROSS_MARK:
             await cadoizo_message.reply(contents_message + cancel_message)
-            await self.ctx.send(cancel_message)
+            await self.ctx.channel.send(cancel_message)
             return False
 
         should_save = False
@@ -610,7 +610,7 @@ class UsableItemCommand(ItemCommand):
             boss_message = result_message
             if boss_mention:
                 boss_message += team_manager.get_boss_mention()
-            await self.ctx.send(boss_message)
+            await self.ctx.channel.send(boss_message)
 
             # Process instant Cadoizo in kit:
             for elem in contents:
@@ -636,7 +636,7 @@ class UsableItemCommand(ItemCommand):
         boss_message = result_message
         if boss_mention:
             boss_message += team_manager.get_boss_mention()
-        await self.ctx.send(boss_message)
+        await self.ctx.channel.send(boss_message)
         return should_save
 
     async def run_champi_command(self):

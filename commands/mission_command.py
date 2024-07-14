@@ -1,7 +1,7 @@
 import interactions
 
 from commands.item_command import ItemCommand
-from init_config import TEAM_FOLDER, mission_manager
+from init_config import TEAM_FOLDER, mission_manager, item_manager
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS, CROSS_MARK
 from manager.reaction_manager import ReactionManager
 
@@ -70,7 +70,7 @@ class MissionCommand(ItemCommand):
             if selected_reaction == CROSS_MARK:
                 cancel_message = "Missions conservées !"
                 await mission_message.reply(cancel_message)
-                await self.ctx.send(cancel_message)
+                await self.ctx.channel.send(cancel_message)
                 return
 
             replaced_mission = self.mission_inventory.current[KEYCAP_NUMBERS.index(selected_reaction)]
@@ -88,7 +88,7 @@ class MissionCommand(ItemCommand):
         await self.item_channel.send(message)
 
         # Confirmation message
-        await self.ctx.send(f"Mission {self.mission_id} ajoutée aux missions en cours !")
+        await self.ctx.channel.send(f"Mission {self.mission_id} ajoutée aux missions en cours !")
 
     async def run_complete(self):
         success = await self.load_team_info()
@@ -138,10 +138,12 @@ class MissionCommand(ItemCommand):
                 boss_message = f"Mission {self.mission_id} validée, inventaire mis à jour !"
 
                 # Add items to inventory and save
-                item_reward = reward.items[r_index - 1]
-                for item in item_reward.item_reward:
+                item_reward = reward.items[r_index - 1].item_reward
+                for item in item_reward:
                     for i in range(2):
-                        self.item_inventory.add(item, qty=item_reward.item_reward[item][i], gold=(i == 1))
+                        if item_reward[item][i] > 0:
+                            if i == 1 or not item_manager.items[item].instant:
+                                self.item_inventory.add(item, qty=item_reward[item][i], gold=(i == 1))
                 self.item_inventory.save(TEAM_FOLDER, self.team.id)
 
             # Edit item inventory message
@@ -161,7 +163,7 @@ class MissionCommand(ItemCommand):
         await mission_inv_msg.edit(content=self.mission_inventory.format_discord(self.team.name))
 
         # Confirmation message
-        await self.ctx.send(boss_message)
+        await self.ctx.channel.send(boss_message)
 
     async def run_cancel(self):
         success = await self.load_team_info()

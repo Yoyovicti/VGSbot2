@@ -76,7 +76,7 @@ class QuestCommand(ItemCommand):
             if selected_reaction == CROSS_MARK:
                 cancel_message = "Quête(s) conservée(s) !"
                 await quest_message.reply(cancel_message)
-                await self.ctx.send(cancel_message)
+                await self.ctx.channel.send(cancel_message)
                 return
 
             replaced_quest = quest_list[KEYCAP_NUMBERS.index(selected_reaction)]
@@ -94,7 +94,7 @@ class QuestCommand(ItemCommand):
         await self.item_channel.send(message)
 
         # Confirmation message
-        await self.ctx.send(f"Quête {self.quest_id} ajoutée aux quêtes en cours !")
+        await self.ctx.channel.send(f"Quête {self.quest_id} ajoutée aux quêtes en cours !")
 
     async def run_cancel(self):
         success = await self.load_team_info()
