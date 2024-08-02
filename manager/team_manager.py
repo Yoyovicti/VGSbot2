@@ -5,6 +5,7 @@ from definition.gimmick import Gimmick
 from definition.mission import Mission
 from definition.quest import Quest
 from inventory.gimmick_inventory import GimmickInventory
+from inventory.shassercouler_grid import ShasserCoulerGrid
 from manager.inventory_manager import InventoryManager
 from inventory.item_inventory import ItemInventory
 from inventory.mission_inventory import MissionInventory
@@ -28,7 +29,7 @@ class TeamManager:
             teams_file.readline()
             print("===== TeamManager =====")
             for team in teams_file:
-                team_id, name, bot_channel_id, item_channel_id, shiny_channel_id, role_id = team.split()
+                team_id, name, bot_channel_id, item_channel_id, shiny_channel_id, role_id, shassercouler_id = team.split()
                 name = name.replace("_", " ")
 
                 item_inventory = ItemInventory(items)
@@ -43,14 +44,18 @@ class TeamManager:
                 gimmick_inventory = GimmickInventory(gimmicks[team_id], items)
                 gimmick_inventory.load(team_path, team_id)
 
+                shassercouler_grid = ShasserCoulerGrid(8, 12)
+                shassercouler_grid.load(team_path, team_id)
+
                 inv_manager = InventoryManager(
                     item_inventory,
                     mission_inventory,
                     quest_inventory,
-                    gimmick_inventory
+                    gimmick_inventory,
+                    shassercouler_grid
                 )
 
-                team_inst = Team(team_id, name, bot_channel_id, item_channel_id, shiny_channel_id, role_id, inv_manager)
+                team_inst = Team(team_id, name, bot_channel_id, item_channel_id, shiny_channel_id, role_id, shassercouler_id, inv_manager)
                 self.teams[team_id] = team_inst
                 print(f"Loaded team: {team_inst}")
 

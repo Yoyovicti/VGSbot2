@@ -108,6 +108,99 @@ class InventoryExtension(interactions.Extension):
             await self.run_clear(ctx, "gimmick")
             return
 
+    @interactions.slash_command(
+        name="inventaire",
+        description="Effectue une action sur les inventaires",
+        scopes=GUILD_IDS,
+        options=INVENTORY_COMMAND_OPTIONS,
+        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
+        dm_permission=False,
+        sub_cmd_name="shassercouler",
+        sub_cmd_description="Gérer la grille du shasser-couler"
+    )
+    async def shassercouler_inventory_command(self, ctx: interactions.SlashContext, ope: str):
+        if ope == "init":
+            # Load team
+            team = team_manager.get_team(str(ctx.channel_id))
+            if team is None:
+                await ctx.send("Erreur: Équipe non trouvée. Assurez-vous d'utiliser la commande dans le bon channel.")
+                return
+
+            # Load inventory
+            shassercouler_grid = team.inventory_manager.shassercouler_grid
+            if shassercouler_grid.initialized:
+                await ctx.send("Erreur: L'inventaire existe déjà.")
+                return
+
+            # Init item inventory and save in memory
+            shassercouler_grid.init()
+            shassercouler_grid.save(TEAM_FOLDER, team.id)
+
+            # Confirmation message
+            await ctx.send("Inventaire initialisé !")
+            return
+
+        if ope == "delete":
+            # Load team
+            team = team_manager.get_team(str(ctx.channel_id))
+            if team is None:
+                await ctx.send("Erreur: Équipe non trouvée. Assurez-vous d'utiliser la commande dans le bon channel.")
+                return
+
+            # Load inventory
+            shassercouler_grid = team.inventory_manager.shassercouler_grid
+            if not shassercouler_grid.initialized:
+                await ctx.send("Erreur: L'inventaire n'est pas initialisé.")
+                return
+
+            # Confirmation step
+            warning_msg = await ctx.send(
+                "Êtes-vous sûr de vouloir réaliser cette opération ? Il n'y a pas de retour en "
+                "arrière !")
+            reaction_manager = ReactionManager(warning_msg, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
+            reaction = await reaction_manager.run()
+            if reaction != REGIONAL_INDICATOR_O:
+                await ctx.send("Opération annulée.")
+                return
+
+            # Delete item inventory
+            shassercouler_grid.delete(TEAM_FOLDER, team.id)
+
+            # Confirmation message
+            await ctx.send("Inventaire supprimé !")
+            return
+
+        if ope == "clear":
+            # Load team
+            team = team_manager.get_team(str(ctx.channel_id))
+            if team is None:
+                await ctx.send("Erreur: Équipe non trouvée. Assurez-vous d'utiliser la commande dans le bon channel.")
+                return
+
+            # Load inventory
+            shassercouler_grid = team.inventory_manager.shassercouler_grid
+            if not shassercouler_grid.initialized:
+                await ctx.send("Erreur: L'inventaire n'est pas initialisé.")
+                return
+
+            # Confirmation step
+            warning_msg = await ctx.send(
+                "Êtes-vous sûr de vouloir réaliser cette opération ? Il n'y a pas de retour en "
+                "arrière !")
+            reaction_manager = ReactionManager(warning_msg, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
+            reaction = await reaction_manager.run()
+            if reaction != REGIONAL_INDICATOR_O:
+                await ctx.send("Opération annulée.")
+                return
+
+            # Clear inventory contents in memory
+            shassercouler_grid.clear()
+            shassercouler_grid.save(TEAM_FOLDER, team.id)
+
+            # Confirmation message
+            await ctx.send("Inventaire vidé !")
+            return
+
     async def run_init(self, ctx: interactions.SlashContext, inv_type: str):
         # Load team
         team = team_manager.get_team(str(ctx.channel_id))
