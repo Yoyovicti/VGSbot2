@@ -48,8 +48,9 @@ class RollItemCommand(ItemCommand):
         global_save_item = False
         global_save_quest = False
         global_save_mission = False
-        for _ in range(self.qty):
-            save_item, save_quest, save_mission = await self.run_roll()
+        for i in range(self.qty):
+            send_channel = (i > 0)
+            save_item, save_quest, save_mission = await self.run_roll(send_channel=send_channel)
             if save_item:
                 global_save_item = True
             if save_quest:
@@ -69,7 +70,7 @@ class RollItemCommand(ItemCommand):
         inv_msg = await self.item_channel.fetch_message(self.item_inventory.message_id)
         await inv_msg.edit(content=self.item_inventory.format_discord(self.team.name))
 
-    async def run_roll(self, enable_charm: bool = True):
+    async def run_roll(self, enable_charm: bool = True, send_channel: bool = False):
         message = "*Aucun objet tiré*\n"
         save_item = False
         save_quest = False
@@ -121,7 +122,10 @@ class RollItemCommand(ItemCommand):
                              f"l'équipe* **{team_manager.teams[target_team].name}**\n")
 
         await self.item_channel.send(team_message)
-        await self.ctx.send(boss_message)
+        if send_channel:
+            await self.ctx.channel.send(boss_message)
+        else:
+            await self.ctx.send(boss_message)
 
         if item == "carapacebleue" or item == "eclair":
             await self.ctx.channel.send(team_manager.get_boss_mention())
@@ -149,9 +153,10 @@ class RollItemCommand(ItemCommand):
             if charm_rng.random() < self.method.charm_roll:
                 message = "*Le charme* **Cupidité irréversible** s'active, vous obtenez un tirage supplémentaire."
                 await self.item_channel.send(message)
-                await self.ctx.send(message)
+                await self.ctx.channel.send(message)
 
-                charm_save_item, charm_save_quest, charm_save_mission = await self.run_roll(enable_charm=False)
+                charm_save_item, charm_save_quest, charm_save_mission = await self.run_roll(enable_charm=False,
+                                                                                            send_channel=True)
                 if charm_save_item:
                     save_item = True
                 if charm_save_quest:
