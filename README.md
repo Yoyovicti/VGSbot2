@@ -47,6 +47,7 @@ python3 main.py
 ## Changelog
 | <b>Version | <b>Release date | <b>Changes                |
 |------------|-----------------|---------------------------|
+| <b>2.1     | 2024-08-30      | Shasser-couler, bug fixes |
 | <b>2.0     | 2024-07-04      | Production release        |
 | <b>1.4     | 2024-06-19      | Item rolls                |
 | <b>1.3     | 2024-06-13      | Quests                    |
