@@ -17,6 +17,17 @@ TOKEN_PATH = os.path.join(BOT_FOLDER, "token.txt")
 GUILD_IDS_PATH = os.path.join(BOT_FOLDER, "guild_ids.txt")
 BOO_NAMES_PATH = os.path.join(BOT_FOLDER, "boo.txt")
 
+EXTENSIONS = [
+    # "extension.v8.gimmick_extension",
+    # "extension.v8.shassercouler_extension"
+    "extension.inventory_extension",
+    "extension.item_extension",
+    "extension.gimmick_extension",
+    "extension.mission_extension",
+    "extension.quest_extension",
+    "extension.backup_extension",
+]
+
 # Load Token
 TOKEN = ""
 with open(TOKEN_PATH, "r") as token_file:
@@ -26,7 +37,7 @@ with open(TOKEN_PATH, "r") as token_file:
 GUILD_IDS = []
 with open(GUILD_IDS_PATH, "r") as guild_ids_file:
     for guild_id in guild_ids_file:
-        GUILD_IDS.append(guild_id)
+        GUILD_IDS.append(guild_id.rstrip())
 
 BOO_NAMES = []
 with open(BOO_NAMES_PATH, "r") as boo_names_file:

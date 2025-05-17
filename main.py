@@ -1,15 +1,15 @@
 import interactions
 
-from init_config import TOKEN
-
+from init_config import TOKEN, EXTENSIONS
 
 if __name__ == "__main__":
+    print("===== Main =====")
     bot = interactions.Client(token=TOKEN)
-    bot.load_extension("extension.inventory_extension")
-    bot.load_extension("extension.item_extension")
-    bot.load_extension("extension.gimmick_extension")
-    bot.load_extension("extension.mission_extension")
-    bot.load_extension("extension.quest_extension")
-    bot.load_extension("extension.backup_extension")
-    bot.load_extension("extension.shassercouler_extension")
+
+    print("> Extensions")
+    for extension in EXTENSIONS:
+        bot.load_extension(extension)
+        print(f"Loaded extension: {extension}")
+
+
     bot.start()
