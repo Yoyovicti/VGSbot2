@@ -193,15 +193,16 @@ class ItemExtension(interactions.Extension):
         options=[
             QTY_OPTION,
             GOLD_OPTION,
-            SAFE_OPTION
+            SAFE_OPTION,
+            CHARM_OPTION
         ],
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False
     )
     async def maxitomate_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
-                                 stealable: str = "oui"):
+                                 stealable: str = "oui", charm: str = "non"):
         command = ClassicItemCommand(self.bot, ctx, "maxitomate", param="remove", qty=qty, gold=(gold == "oui"),
-                                     safe=(stealable == "non"))
+                                     safe=(stealable == "non"), charm=(charm == "oui"))
         await command.run()
 
     @interactions.slash_command(
@@ -211,15 +212,16 @@ class ItemExtension(interactions.Extension):
         options=[
             QTY_OPTION,
             GOLD_OPTION,
-            SAFE_OPTION
+            SAFE_OPTION,
+            CHARM_OPTION
         ],
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False
     )
     async def ruche_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
-                            stealable: str = "oui"):
+                            stealable: str = "oui", charm: str = "non"):
         command = ClassicItemCommand(self.bot, ctx, "ruche", param="remove", qty=qty, gold=(gold == "oui"),
-                                     safe=(stealable == "non"))
+                                     safe=(stealable == "non"), charm=(charm == "oui"))
         await command.run()
 
     @interactions.slash_command(
@@ -229,15 +231,16 @@ class ItemExtension(interactions.Extension):
         options=[
             QTY_OPTION,
             GOLD_OPTION,
-            SAFE_OPTION
+            SAFE_OPTION,
+            CHARM_OPTION
         ],
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False
     )
     async def grappin_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
-                              stealable: str = "oui"):
+                              stealable: str = "oui", charm: str = "non"):
         command = ClassicItemCommand(self.bot, ctx, "grappin", param="remove", qty=qty, gold=(gold == "oui"),
-                                     safe=(stealable == "non"))
+                                     safe=(stealable == "non"), charm=(charm == "oui"))
         await command.run()
 
     @interactions.slash_command(
@@ -265,15 +268,16 @@ class ItemExtension(interactions.Extension):
         options=[
             QTY_OPTION,
             GOLD_OPTION,
-            SAFE_OPTION
+            SAFE_OPTION,
+            CHARM_OPTION
         ],
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False
     )
     async def etoile_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
-                             stealable: str = "oui"):
+                             stealable: str = "oui", charm: str = "non"):
         command = ClassicItemCommand(self.bot, ctx, "etoile", param="remove", qty=qty, gold=(gold == "oui"),
-                                     safe=(stealable == "non"))
+                                     safe=(stealable == "non"), charm=(charm == "oui"))
         await command.run()
 
     @interactions.slash_command(
@@ -301,15 +305,16 @@ class ItemExtension(interactions.Extension):
         options=[
             QTY_OPTION,
             GOLD_OPTION,
-            SAFE_OPTION
+            SAFE_OPTION,
+            CHARM_OPTION
         ],
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False
     )
     async def picvenin_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
-                               stealable: str = "oui"):
+                               stealable: str = "oui", charm: str = "non"):
         command = ClassicItemCommand(self.bot, ctx, "picvenin", param="remove", qty=qty, gold=(gold == "oui"),
-                                     safe=(stealable == "non"))
+                                     safe=(stealable == "non"), charm=(charm == "oui"))
         await command.run()
 
     @interactions.slash_command(
@@ -337,15 +342,16 @@ class ItemExtension(interactions.Extension):
         options=[
             QTY_OPTION,
             GOLD_OPTION,
-            SAFE_OPTION
+            SAFE_OPTION,
+            CHARM_OPTION
         ],
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False
     )
     async def klaxon_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
-                             stealable: str = "oui"):
+                             stealable: str = "oui", charm: str = "non"):
         command = ClassicItemCommand(self.bot, ctx, "klaxon", param="remove", qty=qty, gold=(gold == "oui"),
-                                     safe=(stealable == "non"))
+                                     safe=(stealable == "non"), charm=(charm == "oui"))
         await command.run()
 
     @interactions.slash_command(
@@ -401,15 +407,16 @@ class ItemExtension(interactions.Extension):
         options=[
             QTY_OPTION,
             GOLD_OPTION,
-            SAFE_OPTION
+            SAFE_OPTION,
+            CHARM_OPTION
         ],
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False
     )
     async def paopou_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
-                             stealable: str = "oui"):
+                             stealable: str = "oui", charm: str = "non"):
         command = ClassicItemCommand(self.bot, ctx, "paopou", param="remove", qty=qty, gold=(gold == "oui"),
-                                     safe=(stealable == "non"))
+                                     safe=(stealable == "non"), charm=(charm == "oui"))
         await command.run()
 
     @interactions.slash_command(
@@ -419,13 +426,14 @@ class ItemExtension(interactions.Extension):
         options=[
             QTY_OPTION,
             GOLD_OPTION,
-            SAFE_OPTION
+            SAFE_OPTION,
+            CHARM_OPTION
         ],
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False
     )
     async def fleurdegel_command(self, ctx: interactions.SlashContext, qty: int = 1, gold: str = "non",
-                                 stealable: str = "oui"):
+                                 stealable: str = "oui", charm: str = "non"):
         command = ClassicItemCommand(self.bot, ctx, "fleurdegel", param="remove", qty=qty, gold=(gold == "oui"),
-                                     safe=(stealable == "non"))
+                                     safe=(stealable == "non"), charm=(charm == "oui"))
         await command.run()
