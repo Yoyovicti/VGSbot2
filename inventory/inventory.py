@@ -3,7 +3,7 @@ class Inventory:
         self.initialized = False
         self.message_id = message_id
 
-    def init(self, message_id: str):
+    def init(self, message_id: str = "0"):
         raise NotImplementedError
 
     def delete(self, base_path: str, team_name: str):

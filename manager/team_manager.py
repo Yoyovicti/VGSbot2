@@ -1,22 +1,18 @@
 import os
 from typing import Dict
 
-from definition.gimmick import Gimmick
+from definition.item import Item
 from definition.mission import Mission
 from definition.quest import Quest
-from inventory.gimmick_inventory import GimmickInventory
-from inventory.shassercouler_grid import ShasserCoulerGrid
-from manager.inventory_manager import InventoryManager
-from inventory.item_inventory import ItemInventory
-from inventory.mission_inventory import MissionInventory
-from inventory.quest_inventory import QuestInventory
-from definition.item import Item
 from definition.team import Team
+from inventory.item_inventory import ItemInventory
+from inventory.quest_inventory import QuestInventory
+from manager.inventory_manager import InventoryManager
 
 
 class TeamManager:
     def __init__(self, vgs_path: str, team_path: str, items: Dict[str, Item], missions: Dict[str, Mission],
-                 quests: Dict[str, Quest], gimmicks: Dict[str, Dict[str, Gimmick]]):
+                 quests: Dict[str, Quest]):
         boss_roles_path = os.path.join(vgs_path, "boss.txt")
         self.boss_roles = []
         with open(boss_roles_path, "r") as boss_file:
@@ -29,38 +25,39 @@ class TeamManager:
             teams_file.readline()
             print("===== TeamManager =====")
             for team in teams_file:
-                team_id, name, bot_channel_id, item_channel_id, shiny_channel_id, role_id, shassercouler_id = team.split()
+                team_id, name, bot_channel_id, item_channel_id, shiny_channel_id, role_id = team.split()
                 name = name.replace("_", " ")
 
                 item_inventory = ItemInventory(items)
                 item_inventory.load(team_path, team_id)
 
-                mission_inventory = MissionInventory(missions)
-                mission_inventory.load(team_path, team_id)
+                # mission_inventory = MissionInventory(missions)
+                # mission_inventory.load(team_path, team_id)
 
                 quest_inventory = QuestInventory(quests)
                 quest_inventory.load(team_path, team_id)
 
-                gimmick_inventory = GimmickInventory(gimmicks[team_id], items)
-                gimmick_inventory.load(team_path, team_id)
+                # gimmick_inventory = GimmickInventory(gimmicks[team_id], items)
+                # gimmick_inventory.load(team_path, team_id)
 
-                shassercouler_grid = ShasserCoulerGrid(8, 12)
-                shassercouler_grid.load(team_path, team_id)
+                # shassercouler_grid = ShasserCoulerGrid(8, 12)
+                # shassercouler_grid.load(team_path, team_id)
 
                 inv_manager = InventoryManager(
                     item_inventory,
-                    mission_inventory,
+                    # mission_inventory,
                     quest_inventory,
-                    gimmick_inventory,
-                    shassercouler_grid
+                    # gimmick_inventory,
+                    # shassercouler_grid
                 )
 
-                team_inst = Team(team_id, name, bot_channel_id, item_channel_id, shiny_channel_id, role_id, shassercouler_id, inv_manager)
+                team_inst = Team(team_id, name, bot_channel_id, item_channel_id, shiny_channel_id, role_id, inv_manager)
                 self.teams[team_id] = team_inst
                 print(f"Loaded team: {team_inst}")
 
     def get_team(self, channel_id: str) -> Team | None:
         for team in self.teams.values():
+            print(team.bot_channel_id, channel_id)
             if team.bot_channel_id == channel_id:
                 return team
         return None

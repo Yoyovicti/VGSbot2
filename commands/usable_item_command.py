@@ -6,7 +6,8 @@ from numpy import random
 from logic.boo import Boo
 from logic.cadoizo import Cadoizo
 from commands.item_command import ItemCommand
-from init_config import item_manager, TEAM_FOLDER, ORBE_SUCCESS_RATE, team_manager, roll_manager, GOLD_ORBE_SUCCESS_RATE
+from init_config import item_manager, TEAM_FOLDER, ORBE_SUCCESS_RATE, team_manager, roll_manager, \
+    GOLD_ORBE_SUCCESS_RATE, gimmick_manager
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS, CROSS_MARK
 from manager.reaction_manager import ReactionManager
 
@@ -19,7 +20,7 @@ class UsableItemCommand(ItemCommand):
         self.command_map = {
             "fulgurorbe": self.run_orbe_command,
             "boo": self.run_boo_command,
-            "clairvoyance": self.run_clairvoyance_command,
+            # "clairvoyance": self.run_clairvoyance_command,
             "ar": self.run_ar_command,
             "cadoizo": self.run_cadoizo_command,
             "champi": self.run_champi_command
@@ -38,7 +39,7 @@ class UsableItemCommand(ItemCommand):
         if not await super().load_team_info():
             return False
 
-        self.gimmick_inventory = self.team.inventory_manager.gimmick_inventory
+        self.gimmick_inventory = gimmick_manager.gimmick_list_inventory
         if not self.gimmick_inventory.initialized:
             await self.ctx.send("Erreur: La liste de gimmicks n'est pas initialisée.")
             return False
@@ -264,166 +265,6 @@ class UsableItemCommand(ItemCommand):
 
             item_emojis.append(items[item].get_emoji())
         return item_emojis
-
-    async def run_clairvoyance_command(self):
-        success = await self.load_team_info()
-        if not success:
-            return
-
-        # Verify quantity, ask to use safe items if needed
-        if self.item_inventory.quantity(self.param, self.gold, self.safe) < self.qty:
-            classic_qty = self.item_inventory.quantity(self.param)
-            safe_qty = self.item_inventory.quantity(self.param, safe=True)
-            if self.gold or self.safe or classic_qty + safe_qty < self.qty:
-                await self.ctx.send("Erreur: L'inventaire ne contient pas assez de cet objet.")
-                return
-
-            # Ask for confirmation in case safe items will be removed
-            warning_msg = await self.ctx.send("Cette opération va retirer des objets non volables de l'inventaire. "
-                                              "Souhaitez-vous continuer ?")
-            reaction_manager = ReactionManager(warning_msg, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
-            reaction = await reaction_manager.run()
-            if reaction != REGIONAL_INDICATOR_O:
-                await self.ctx.send("Opération annulée.")
-                return
-
-        # Run each clairvoyance
-        for _ in range(self.qty):
-            await self.run_clairvoyance(self.gold)
-
-        # Save inventories, edit message
-        self.item_inventory.save(TEAM_FOLDER, self.team.id)
-        self.gimmick_inventory.save(TEAM_FOLDER, self.team.id)
-
-        # Edit inventory messages and send to item channel
-        gimmick_inv_msg = await self.item_channel.fetch_message(self.gimmick_inventory.message_id)
-        await gimmick_inv_msg.edit(content=self.gimmick_inventory.format_discord(self.team.name))
-        item_inv_msg = await self.item_channel.fetch_message(self.item_inventory.message_id)
-        await item_inv_msg.edit(content=self.item_inventory.format_discord(self.team.name))
-
-        # Confirmation message
-        await self.ctx.send(f"{item_manager.items['clairvoyance'].get_emoji(self.gold)} Inventaires mis à jour !")
-
-    async def run_clairvoyance(self, gold: bool = False, remove_clairvoyance: bool = True, cancel_option: bool = True):
-        # Load valid teams
-        valid_regions = self.get_valid_clairvoyance_regions(gold)
-        valid_teams = list(valid_regions)
-
-        # Get number of loops
-        n_loop = 1
-        if gold:
-            n_loop = len(valid_teams)
-
-        for c in range(n_loop):
-            # Select team
-            team_select_string = (f"{item_manager.items['clairvoyance'].get_emoji(gold)} Veuillez sélectionner "
-                                  f"l'équipe visée:\n\n")
-            for i in range(len(valid_teams)):
-                team_select_string += f"{KEYCAP_NUMBERS[i]} {team_manager.teams[valid_teams[i]].name}\n"
-            team_select_message = await self.item_channel.send(team_select_string)
-            await self.ctx.send("*En attente du choix des participants...*")
-
-            reaction_list = KEYCAP_NUMBERS[:len(valid_teams)]
-            if cancel_option and c <= 0:
-                reaction_list = [CROSS_MARK] + reaction_list
-            team_reaction_manager = ReactionManager(team_select_message, reaction_list)
-            selected_reaction = await team_reaction_manager.run()
-
-            # Cancel
-            if selected_reaction == CROSS_MARK:
-                await team_select_message.reply("Opération annulée.")
-                await self.ctx.send("Opération annulée.")
-                return
-
-            # Remove target from valid teams (for gold clairvoyance)
-            target_team = valid_teams[KEYCAP_NUMBERS.index(selected_reaction)]
-            valid_teams.remove(target_team)
-
-            # Get target team instance
-            target_team = team_manager.teams[target_team]
-
-            # Check target item channel
-            target_item_channel = await self.bot.fetch_channel(target_team.item_channel_id)
-            if target_item_channel is None:
-                await team_select_message.reply("Opération annulée.")
-                await self.ctx.send("Erreur: Salon objets non trouvé pour la cible.")
-                continue
-
-            # Remove clairvoyance from inventory on last pass
-            if remove_clairvoyance and c >= n_loop - 1:
-                if gold or self.safe:
-                    self.item_inventory.remove(self.param, gold=gold, safe=self.safe)
-                else:
-                    classic_qty = self.item_inventory.quantity(self.param)
-                    if classic_qty <= 0:
-                        self.item_inventory.remove(self.param, safe=True)
-                    else:
-                        self.item_inventory.remove(self.param)
-
-            # Choose random region in valid regions
-            rng = random.Generator(random.MT19937())
-            selected_region = rng.choice(valid_regions[target_team.id])
-
-            # For team that use Clairvoyance, unlock gimmick of selected region
-            # No need to save and edit inventory message, it will be done later anyway
-            if target_team.id == self.team.id:
-                self.gimmick_inventory.set_unlock(selected_region)
-
-                # Send message
-                message = (
-                    f"*Le Pokémon gimmick de la zone* **{self.gimmick_inventory.get_zone(selected_region)} "
-                    f"({selected_region})** *a été révélé. Il s'agit de* "
-                    f"**{self.gimmick_inventory.get_pokemon(selected_region)}**.")
-                await self.item_channel.send(message)
-
-                # Confirmation message
-                await self.ctx.send("Gimmick révélé !")
-                return
-
-            # For other teams, add zone to list of seen gimmicks
-            target_inv = target_team.inventory_manager.gimmick_inventory
-            self.gimmick_inventory.see(target_team.name, target_inv.gimmicks[selected_region])
-            target_inv.add_see_count(selected_region)
-
-            # Save target inventory, edit message (original inventory is saved later)
-            target_inv.save(TEAM_FOLDER, target_team.id)
-            target_inv_msg = await target_item_channel.fetch_message(target_inv.message_id)
-            await target_inv_msg.edit(content=target_inv.format_discord(target_team.name))
-
-            # Send results
-            origin_msg = (f"{item_manager.items['clairvoyance'].get_emoji(gold)} *Voilà ce que j'ai observé chez "
-                          f"{target_team.name} :*\n"
-                          f"**{target_inv.gimmicks[selected_region].zone}** ({selected_region})")
-            target_msg = (f"{item_manager.items['clairvoyance'].get_emoji(gold)} *Une zone gimmick a été "
-                          f"observée... "
-                          f"Il s'agit de* **{target_inv.gimmicks[selected_region].zone}** ({selected_region})")
-            await self.item_channel.send(origin_msg)
-            await target_item_channel.send(target_msg)
-
-    def get_valid_clairvoyance_regions(self, gold: bool) -> Dict[str, List[str]]:
-        valid_teams = {}
-        for team in team_manager.teams:
-            team_inst = team_manager.teams[team]
-            curr_inv = team_inst.inventory_manager.gimmick_inventory
-            team_name = team_inst.name
-
-            for region in curr_inv.contents:
-                # For team that uses Clairvoyance, only add locked gimmicks
-                # Don't add current team for gold clairvoyance
-                if self.team.id == team_inst.id and (gold or curr_inv.is_unlock(region)):
-                    continue
-
-                # For other teams, add gimmicks that are not found and not already seen
-                if (self.team.id != team_inst.id
-                        and (curr_inv.is_found(region) or self.gimmick_inventory.is_seen(team_name, region))):
-                    continue
-
-                if team in valid_teams:
-                    valid_teams[team].append(region)
-                else:
-                    valid_teams[team] = [region]
-
-        return valid_teams
 
     async def run_ar_command(self):
         # Load origin team info

@@ -1,208 +1,138 @@
-import json
-import os
+import os.path
+from datetime import datetime
 from typing import Dict
 
-from manager import save_manager
-from definition.gimmick import Gimmick
-from init_emoji import WHITE_CHECK_MARK, CROSS_MARK
+from definition.gimmick import GimmickList
 from inventory.inventory import Inventory
-from definition.item import Item
 
 
 class GimmickInventory(Inventory):
-    def __init__(self, gimmicks: Dict[str, Gimmick], items: Dict[str, Item]):
+    def __init__(self, name: str, gimmick_list: GimmickList):
         super().__init__()
-        self.gimmicks = gimmicks
-        self.clairvoyance_emoji = items["clairvoyance"].get_emoji()
-        self.seen = {}
-        # TODO put found, seen, unlocked in gimmick object
-        self.contents = {
-            region: {
-                "found": "-",
-                "seen": 0,
-                "unlocked": False
-            }
-            for region in gimmicks
-        }
+        self.img_path = gimmick_list.img_path
+        self.gimmicks = gimmick_list.gimmicks
+
+        self.name = name
+        self.current_step = 1
+        self.found = [{} for _ in range(len(self.gimmicks))]
+        self.seen = []          # Clairvoyance
+        self.unlocked = []      # Clairvoyance dorée
 
     def init(self, message_id: str):
         self.message_id = message_id
         self.clear()
         self.initialized = True
 
-    def delete(self, base_path: str, team_name: str):
-        folder_path = os.path.join(base_path, team_name)
-        save_manager.delete(folder_path, "gimmick_inventory.json")
-
+    def delete(self, base_path: str):
         self.message_id = "0"
         self.clear()
         self.initialized = False
 
     def clear(self):
-        # TODO Clear seen gimmicks should update the counter for other teams
-        self.seen = {}
-        self.contents = {
-            region: {
-                "found": "-",
-                "seen": 0,
-                "unlocked": False
-            }
-            for region in self.gimmicks
-        }
+        self.current_step = 1
+        self.found = [{} for _ in range(len(self.gimmicks))]
+        self.seen = []          # Clairvoyance
+        self.unlocked = []      # Clairvoyance dorée
 
-    def load(self, base_path: str, team_name: str):
-        folder_path = os.path.join(base_path, team_name)
-        data = save_manager.load(folder_path, "gimmick_inventory.json")
-        if data == "":
-            return
-
-        self.deserialize(data)
-        self.initialized = True
-
-    def save(self, base_path: str, team_name: str):
-        folder_path = os.path.join(base_path, team_name)
-        save_manager.save(folder_path, "gimmick_inventory.json", self.serialize())
-
-    def add_gimmick(self, gimmicks: Dict[str, Gimmick], region: str):
-        self.update_gimmicks(gimmicks)
-        self.contents[region] = {
-            "found": "-",
-            "seen": 0,
-            "unlocked": False
-        }
-
-    def update_gimmicks(self, gimmicks: Dict[str, Gimmick]):
-        self.gimmicks = gimmicks
-
-    def get_zone(self, region: str) -> str:
-        return self.gimmicks[region].zone
-
-    def get_pokemon(self, region: str) -> str:
-        return self.gimmicks[region].pokemon
-
-    def is_unlock(self, region: str) -> bool:
-        return self.contents[region]["unlocked"]
-
-    def set_unlock(self, region: str, state: bool = True):
-        self.contents[region]["unlocked"] = state
-
-    def get_see_count(self, region: str) -> int:
-        return self.contents[region]["seen"]
-
-    def is_seen(self, team_name: str, region: str) -> bool:
-        if team_name not in self.seen:
-            return False
-
-        for gimmick in self.seen[team_name]:
-            if gimmick.region == region:
-                return True
-
-        return False
-
-    def get_seen(self, team_name: str, region: str) -> Gimmick | None:
-        for gimmick in self.seen[team_name]:
-            if gimmick.region == region:
-                return gimmick
-        return None
-
-    def see(self, team_name: str, gimmick: Gimmick, state: bool = True):
+    def see(self, team_name: str, state: bool = True):
         if not state:
             if team_name in self.seen:
-                for curr_gim in self.seen[team_name]:
-                    if curr_gim.region == gimmick.region:
-                        self.seen[team_name].remove(gimmick)
-                        return
+                self.seen.remove(team_name)
             return
 
+        print(team_name, self.seen)
         if team_name not in self.seen:
-            self.seen[team_name] = []
-        self.seen[team_name].append(gimmick)
+            self.seen.append(team_name)
 
-    def is_found(self, region: str) -> bool:
-        return self.get_found(region) != "-"
+    def unlock(self, team_name: str, state: bool = True):
+        if not state:
+            if team_name in self.unlocked:
+                self.unlocked.remove(team_name)
+            return
 
-    def get_found(self, region: str) -> str:
-        return self.contents[region]["found"]
+        if team_name not in self.unlocked:
+            self.unlocked.append(team_name)
 
-    def set_found(self, region: str, team_name: str):
-        self.contents[region]["found"] = team_name
+    def set_found(self, step: int, team: str, date: datetime):
+        if 0 < step < len(self.gimmicks) + 1:
+            self.found[step - 1] = {
+                "team": team,
+                "date": str(date.date())
+            }
+        print(step, self.found[step-1])
 
-    def add_see_count(self, region: str, qty: int = 1):
-        self.contents[region]["seen"] += qty
+    def get_found(self, step: int):
+        return len(self.found[step - 1]) > 0
 
-    def remove_see_count(self, region: str, qty: int = 1):
-        self.add_see_count(region, qty=-qty)
+    def get_unlock(self, team: str):
+        return team in self.unlocked
 
-    def serialize(self) -> str:
+    def next_step(self):
+        n_gimmicks = len(self.gimmicks)
+        if self.current_step - 1 < n_gimmicks:
+            if self.current_step < n_gimmicks:
+                if self.found[self.current_step]:
+                    self.current_step += 1
+            self.current_step += 1
+
+    def clear_seen(self):
+        self.seen = []
+
+    def clear_unlocked(self):
+        self.unlocked = []
+
+    def get_raw_data(self):
         data = {
             "message_id": self.message_id,
-            "seen": {
-                team: [
-                    (gimmick.region, gimmick.zone, gimmick.pokemon)
-                    for gimmick in self.seen[team]
-                ]
-                for team in self.seen
-            },
-            "contents": self.contents
+            "current_step": self.current_step,
+            "found": self.found,
+            "seen": self.seen,
+            "unlocked": self.unlocked
         }
-        return json.dumps(data, indent=4)
+        print("data: ", data)
+        return data
 
-    def deserialize(self, data: str):
-        json_data = json.loads(data)
-        self.message_id = json_data["message_id"]
-        self.seen = {
-            team: [
-                Gimmick(region, zone, pokemon)
-                for (region, zone, pokemon) in json_data["seen"][team]
-            ]
-            for team in json_data["seen"]
-        }
-        self.contents = json_data["contents"]
+    def deserialize(self, data: Dict):
+        print("data:", data)
+        self.message_id = data["message_id"]
+        self.current_step = data["current_step"]
+        self.found = data["found"]
+        self.seen = data["seen"]
+        self.unlocked = data["unlocked"]
 
-    def format_discord(self, team_name: str) -> str:
-        string = f"__**Gimmicks de l'équipe {team_name} :**__\n"
-        for region in self.contents:
-            gimmick = self.gimmicks[region]
+    def format_discord(self) -> str:
+        string = f"__**{self.name}**__\n"
 
-            found_team_name = self.get_found(region)
-            see_count = self.get_see_count(region)
-            unlocked = self.is_unlock(region)
+        for i in range(len(self.gimmicks)):
+            gimmick = self.gimmicks[i]
 
-            if found_team_name != "-":
-                if found_team_name == team_name:
-                    string += f"{WHITE_CHECK_MARK} "
-                else:
-                    string += f"{CROSS_MARK} ~~"
+            string += f"**Étape {i+1}/{len(self.gimmicks)} -** "
+            found = self.found[i]
 
-            elif see_count > 0:
-                for i in range(see_count):
-                    string += f"{self.clairvoyance_emoji}"
-                string += " "
+            if i != self.current_step - 1:
+                if not found:
+                    string += f"*À venir*\n"
+                    continue
 
-            else:
-                string += "- "
+            string += f"**{gimmick.pokemon}** : "
+            if found:
+                string += f"*Validé le {self.found[i]['date']} par l'équipe {self.found[i]['team']} *\n"
+                continue
 
-            string += f"**{gimmick.region} :** *{gimmick.zone}"
-            if unlocked:
-                string += f" - {gimmick.pokemon}"
-            string += "*"
-
-            if found_team_name != "-" and found_team_name != team_name:
-                string += f"~~ *Trouvé par* **{found_team_name}**"
-
+            string += f"*En cours*\n"
+            string += f"- Version : *{gimmick.version}*\n" if gimmick.version != "" else ""
+            string += f"- Méthode : *{gimmick.method}*\n" if gimmick.method != "" else ""
+            string += f"- Zone : *{gimmick.zone}*\n" if gimmick.zone != "" else ""
+            string += f"- Bonus : ***x{gimmick.bonus}***\n"
+            string += f"- Note : *{gimmick.note}*\n" if gimmick.note != "" else ""
             string += "\n"
 
-        string_seen = f"__**Gimmicks observés :**__\n"
-        for team in self.seen:
-            n_seen = len(self.seen[team])
-            if n_seen > 0:
-                string_seen += f"**{team} :** *"
-                for i in range(n_seen):
-                    if i > 0:
-                        string_seen += ", "
-                    gimmick = self.seen[team][i]
-                    string_seen += f"{gimmick.region} - {gimmick.zone}"
-                string_seen += "*\n"
-
-        string += "\n" + string_seen
         return string[:2000]
+
+    def get_image_path(self, base_path):
+        gimmicks_path = os.path.join(base_path, "gimmicks")
+        list_path = os.path.join(gimmicks_path, self.img_path)
+        step_path = os.path.join(list_path, f"{self.current_step}.png")
+        return step_path
+
+

@@ -1,9 +1,11 @@
-import interactions
+from datetime import datetime, timedelta
 
-from commands.gimmick_item_command import GimmickItemCommand
-from definition.gimmick import Gimmick
-from init_config import GUILD_IDS, team_manager, gimmick_manager, TEAM_FOLDER
-from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS, CROSS_MARK
+import interactions
+import pytz
+from interactions import DateTrigger
+
+from init_config import GUILD_IDS, team_manager, gimmick_manager, GIMMICK_CHANNEL, VGS_FOLDER
+from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N
 from manager.reaction_manager import ReactionManager
 
 
@@ -11,77 +13,199 @@ from manager.reaction_manager import ReactionManager
 # TODO Refactor with gimmick command
 
 class GimmickExtension(interactions.Extension):
-    REGION_OPTION = interactions.SlashCommandOption(
-        name="région",
-        description="La région du gimmick",
+    INVENTORY_COMMAND_OPTIONS = [
+        interactions.SlashCommandOption(
+            name="opération",
+            description="Opération à réaliser sur l'inventaire",
+            type=interactions.OptionType.STRING,
+            required=True,
+            argument_name="ope",
+            choices=[
+                interactions.SlashCommandChoice(name="créer", value="init"),
+                interactions.SlashCommandChoice(name="suppr", value="delete"),
+                interactions.SlashCommandChoice(name="vider", value="clear")
+            ]
+        ),
+    ]
+
+    @interactions.slash_command(
+        name="inventaire",
+        description="Effectue une action sur les inventaires",
+        scopes=GUILD_IDS,
+        options=INVENTORY_COMMAND_OPTIONS,
+        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
+        dm_permission=False,
+        sub_cmd_name="gimmick",
+        sub_cmd_description="Gérer la liste de gimmicks"
+    )
+    async def gimmick_inventory_command(self, ctx: interactions.SlashContext, ope: str):
+        if ope == "init":
+            await self.init_gimmicks(ctx)
+            return
+        if ope == "delete":
+            await self.delete_gimmicks(ctx)
+            return
+        if ope == "clear":
+            await self.clear_gimmicks(ctx)
+            return
+
+    async def edit_gimmick_message(self, gimmick_list):
+        gimmick_channel = await self.bot.fetch_channel(GIMMICK_CHANNEL)
+        gimmick_message = await gimmick_channel.fetch_message(gimmick_list.message_id)
+        await gimmick_message.edit(content=gimmick_list.format_discord(), file=gimmick_list.get_image_path(VGS_FOLDER))
+
+    async def init_gimmicks(self, ctx: interactions.SlashContext):
+        # Load inventory
+        inventory = gimmick_manager.gimmick_list_inventory
+        if inventory is None:
+            await ctx.send("Erreur: Commande non implémentée.")
+            return
+        if inventory.initialized:
+            await ctx.send("Erreur: L'inventaire existe déjà.")
+            return
+
+        # Send message in gimmick channel
+        gimmick_channel = await self.bot.fetch_channel(GIMMICK_CHANNEL)
+
+        inventory.init()
+        for entry in inventory.contents:
+            gimmick_list = inventory.contents[entry]
+            gimmick_list_message = await gimmick_channel.send(content=gimmick_list.format_discord(), file=gimmick_list.get_image_path(VGS_FOLDER))
+
+            gimmick_list.init(str(gimmick_list_message.id))
+
+        inventory.save(VGS_FOLDER)
+
+        # Confirmation message
+        await ctx.send("Listes de gimmicks initialisées !")
+
+    async def delete_gimmicks(self, ctx: interactions.SlashContext):
+        # Load inventory
+        inventory = gimmick_manager.gimmick_list_inventory
+        if inventory is None:
+            await ctx.send("Erreur: Commande non implémentée.")
+            return
+        if not inventory.initialized:
+            await ctx.send("Erreur: L'inventaire n'est pas initialisé.")
+            return
+
+        # Confirmation step
+        warning_msg = await ctx.send("Êtes-vous sûr de vouloir réaliser cette opération ? Il n'y a pas de retour en "
+                                     "arrière !")
+        reaction_manager = ReactionManager(warning_msg, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
+        reaction = await reaction_manager.run()
+        if reaction != REGIONAL_INDICATOR_O:
+            await ctx.send("Opération annulée.")
+            return
+
+        # Delete message in gimmick channel
+        gimmick_channel = await self.bot.fetch_channel(GIMMICK_CHANNEL)
+
+        for entry in inventory.contents:
+            gimmick_list = inventory.contents[entry]
+            gimmick_list_message = await gimmick_channel.fetch_message(gimmick_list.message_id)
+            await gimmick_channel.delete_message(gimmick_list_message)
+
+        inventory.delete(VGS_FOLDER)
+
+        # Confirmation message
+        await ctx.send("Listes de gimmicks supprimées !")
+
+    async def clear_gimmicks(self, ctx: interactions.SlashContext):
+        # Load inventory
+        inventory = gimmick_manager.gimmick_list_inventory
+        if inventory is None:
+            await ctx.send("Erreur: Commande non implémentée.")
+            return
+        if not inventory.initialized:
+            await ctx.send("Erreur: L'inventaire n'est pas initialisé.")
+            return
+
+        # Confirmation step
+        warning_msg = await ctx.send("Êtes-vous sûr de vouloir réaliser cette opération ? Il n'y a pas de retour en "
+                                     "arrière !")
+        reaction_manager = ReactionManager(warning_msg, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
+        reaction = await reaction_manager.run()
+        if reaction != REGIONAL_INDICATOR_O:
+            await ctx.send("Opération annulée.")
+            return
+
+        # Clear inventory contents in memory
+        inventory.clear()
+        inventory.save(VGS_FOLDER)
+
+        # Edit message in item channel
+        gimmick_channel = await self.bot.fetch_channel(GIMMICK_CHANNEL)
+        for entry in inventory.contents:
+            gimmick_list = inventory.contents[entry]
+            gimmick_message = await gimmick_channel.fetch_message(gimmick_list.message_id)
+            await gimmick_message.edit(content=gimmick_list.format_discord(), file=gimmick_list.get_image_path(VGS_FOLDER))
+
+        # Confirmation message
+        await ctx.send("Listes de gimmicks vidées !")
+
+    LIST_OPTION = interactions.SlashCommandOption(
+        name="liste",
+        description="La liste de gimmicks",
         type=interactions.OptionType.STRING,
         required=True,
-        argument_name="cat",
+        argument_name="list_name",
         choices=[
-            interactions.SlashCommandChoice(name=cat, value=cat)
-            for cat in gimmick_manager.gimmicks[list(gimmick_manager.gimmicks)[0]]
+            interactions.SlashCommandChoice(name=list_name, value=list_name)
+            for list_name in gimmick_manager.gimmicks
         ]
     )
 
-    CAT_OPTION = interactions.SlashCommandOption(
-        name="catégorie",
-        description="La région du gimmick",
-        type=interactions.OptionType.STRING,
+    STEP_OPTION = interactions.SlashCommandOption(
+        name="étape",
+        description="L'étape de la liste de gimmicks",
+        type=interactions.OptionType.INTEGER,
         required=True,
-        argument_name="category"
+        argument_name="step",
+        min_value=1,
+        max_value=6
     )
 
-    TEAM_OPTION = interactions.SlashCommandOption(
-        name="équipe",
-        description="L'équipe concernée",
-        type=interactions.OptionType.STRING,
-        required=True,
-        argument_name="team",
-        choices=[
-            interactions.SlashCommandChoice(name=team_manager.teams[team].name, value=team)
-            for team in team_manager.teams
-        ]
+    DAY_OPTION = interactions.SlashCommandOption(
+        name="jour",
+        description="Le jour de la validation",
+        type=interactions.OptionType.INTEGER,
+        required=False,
+        argument_name="day",
+        min_value=1,
+        max_value=31
     )
 
-    CANCEL_OPTION = interactions.SlashCommandOption(
-        name="annuler",
-        description="Inverser l'opération",
+    MONTH_OPTION = interactions.SlashCommandOption(
+        name="mois",
+        description="Le mois de la validation",
+        type=interactions.OptionType.INTEGER,
+        required=False,
+        argument_name="month",
+        min_value=6,
+        max_value=8
+    )
+
+    INSTANT_OPTION = interactions.SlashCommandOption(
+        name="instant",
+        description="Si oui, révèle le gimmick immédiatement. Si non, attend minuit.",
         type=interactions.OptionType.STRING,
         required=False,
-        argument_name="cancel",
         choices=[
             interactions.SlashCommandChoice(name="oui", value="oui"),
             interactions.SlashCommandChoice(name="non", value="non")
         ]
     )
 
-    ZONE_OPTION = interactions.SlashCommandOption(
-        name="zone",
-        description="La zone du gimmick",
-        type=interactions.OptionType.STRING,
-        required=True,
-        argument_name="zone"
-    )
-
-    POKEMON_OPTION = interactions.SlashCommandOption(
-        name="pokémon",
-        description="Le Pokémon gimmick de liste",
-        type=interactions.OptionType.STRING,
-        required=True,
-        argument_name="pokemon"
-    )
 
     def __init__(self, bot: interactions.Client):
         self.add_ext_auto_defer()
 
         self.team = None
-        self.gimmick_inventory = None
-        self.item_channel = None
+        self.gimmick_list = None
 
     def init_team_info(self):
         self.team = None
-        self.gimmick_inventory = None
-        self.item_channel = None
 
     async def load_team_info(self, ctx: interactions.SlashContext) -> bool:
         self.init_team_info()
@@ -91,258 +215,120 @@ class GimmickExtension(interactions.Extension):
             await ctx.send("Erreur: Équipe non trouvée. Assurez-vous d'utiliser la commande dans le bon channel.")
             return False
 
-        self.gimmick_inventory = self.team.inventory_manager.gimmick_inventory
-        if not self.gimmick_inventory.initialized:
-            await ctx.send("Erreur: L'inventaire n'est pas initialisé.")
-            return False
-
-        self.item_channel = await self.bot.fetch_channel(self.team.item_channel_id)
-        if self.item_channel is None:
-            await ctx.send("Erreur: Salon objets non trouvé pour l'équipe sélectionnée.")
-            return False
-
         return True
-
-    @interactions.slash_command(
-        name="d6",
-        description="Utilise un D6",
-        scopes=GUILD_IDS,
-        options=[
-            REGION_OPTION,
-            ZONE_OPTION,
-            POKEMON_OPTION
-        ],
-        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
-        dm_permission=False
-    )
-    async def d6_command(self, ctx: interactions.SlashContext, cat, zone, pokemon):
-        command = GimmickItemCommand(self.bot, ctx, "d6", region=cat, zone=zone, pokemon=pokemon)
-        await command.run()
 
     @interactions.slash_command(
         name="gimmick",
         description="Effectue une action sur les gimmicks",
         scopes=GUILD_IDS,
         options=[
-            REGION_OPTION
+            LIST_OPTION,
+            STEP_OPTION,
+            DAY_OPTION,
+            MONTH_OPTION,
+            INSTANT_OPTION
         ],
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False,
         sub_cmd_name="valider",
         sub_cmd_description="Valider la trouvaille d'un gimmick de liste."
     )
-    async def gimmick_found_command(self, ctx: interactions.SlashContext, cat: str):
+    async def gimmick_found_command(self, ctx: interactions.SlashContext, list_name: str, step: int, day: int = -1,
+                                    month: int = -1, instant: str = "non"):
+        # Load inventory
+        inventory = gimmick_manager.gimmick_list_inventory
+        if inventory is None:
+            await ctx.send("Erreur: Commande non implémentée.")
+            return
+        if not inventory.initialized:
+            await ctx.send("Erreur: L'inventaire n'est pas initialisé.")
+            return
+
         success = await self.load_team_info(ctx)
         if not success:
             return
 
-        if self.gimmick_inventory.is_found(cat):
+        if inventory.get_found(list_name, step):
             await ctx.send("Erreur: le gimmick a déjà été validé.")
             return
 
-        if not self.gimmick_inventory.is_unlock(cat):
-            warning_msg = await ctx.send("Attention ! Le Pokémon gimmick n'a jamais été révélé aux participants. Cette "
-                                         "opération va valider le gimmick et révéler le Pokémon.\n"
-                                         "Souhaitez-vous continuer ?")
-            reaction_manager = ReactionManager(warning_msg, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
-            reaction = await reaction_manager.run()
-            if reaction != REGIONAL_INDICATOR_O:
-                await ctx.send("Opération annulée.")
+        curr_step = inventory.get_current_step(list_name)
+        if step != curr_step:
+            if not(step == curr_step + 1 and inventory.get_unlock(self.team.name, list_name)):
+                await ctx.send(f"Erreur: le gimmick de l'étape {step} n'est pas encore disponible.")
                 return
 
-        # Select team that found the gimmick
-        valid_teams = list(team_manager.teams)
-        team_select_string = "Veuillez sélectionner l'équipe qui a validé le gimmick :\n\n"
-        for i in range(len(team_manager.teams)):
-            team_select_string += f"{KEYCAP_NUMBERS[i]} {team_manager.teams[valid_teams[i]].name}\n"
-        team_select_message = await ctx.send(team_select_string)
-        team_reaction_manager = ReactionManager(team_select_message,
-                                                [CROSS_MARK] + KEYCAP_NUMBERS[:len(valid_teams)])
-        selected_reaction = await team_reaction_manager.run()
+        else:
+            inventory.next_step(list_name)
 
-        # Cancel
-        if selected_reaction == CROSS_MARK:
-            await ctx.send("Opération annulée.")
-            return
+        inventory.clear_seen(list_name)
+        inventory.clear_unlocked(list_name)
 
-        # Get name of team that found the gimmick
-        target_team_id = valid_teams[KEYCAP_NUMBERS.index(selected_reaction)]
-        target_team_name = team_manager.teams[target_team_id].name
+        inventory.set_found(list_name, self.team.name, step)
+        inventory.save(VGS_FOLDER)
 
-        if self.gimmick_inventory.get_see_count(cat) > 0:
-            # Delete from opponents seen list
-            for team in team_manager.teams:
-                if self.team.id == team:
-                    continue
-                gimmick_inv = team_manager.teams[team].inventory_manager.gimmick_inventory
-                if gimmick_inv.is_seen(self.team.name, cat):
-                    # Update and save
-                    gimmick_inv.see(self.team.name, gimmick_inv.get_seen(self.team.name, cat), state=False)
-                    gimmick_inv.save(TEAM_FOLDER, team)
+        # TODO Edit message, update png
+        gimmick_list = inventory.contents[list_name]
 
-                    # Send message
-                    item_channel = await self.bot.fetch_channel(team_manager.teams[team].item_channel_id)
-                    if item_channel is None:
-                        await ctx.send(f"Erreur: Salon objets non trouvé pour l'équipe {team}")
-                        continue
+        if instant == "oui":
+            await self.edit_gimmick_message(gimmick_list)
+            # Confirmation message
+            await ctx.send("Gimmick validé !")
+        else:
+            paris_tz = pytz.timezone("Europe/Paris")
+            now_paris = datetime.now(paris_tz)
 
-                    inv_msg = await item_channel.fetch_message(gimmick_inv.message_id)
-                    await inv_msg.edit(content=gimmick_inv.format_discord(team_manager.teams[team].name))
-                    message = (f"*Le gimmick de la région* **{cat}** *observé chez l'équipe {self.team.name} a été "
-                               f"validé et a donc été supprimé des gimmicks observés.*\n")
-                    await item_channel.send(message)
+            if month > 0: now_paris = now_paris.replace(month=month)
+            if day > 0: now_paris = now_paris.replace(day=day)
+            if now_paris < datetime.now(paris_tz):
+                await self.edit_gimmick_message(gimmick_list)
+                await ctx.send("Gimmick validé !")
+                return
 
-        # Mark gimmick as found, unlock and save
-        self.gimmick_inventory.set_found(cat, target_team_name)
-        self.gimmick_inventory.set_unlock(cat)
-        self.gimmick_inventory.save(TEAM_FOLDER, self.team.id)
+            # schedule = now_paris + timedelta(seconds=10)
+            schedule = (now_paris + timedelta(days=1)).replace(hour=0, minute=0, second=0)
+            local_dt = schedule.astimezone()
+            naive_local_dt = local_dt.replace(tzinfo=None)
 
-        # Edit inventory message and send to item channel for current team
-        inv_msg = await self.item_channel.fetch_message(self.gimmick_inventory.message_id)
-        await inv_msg.edit(content=self.gimmick_inventory.format_discord(self.team.name))
-        message = f"*Le gimmick de la région **{cat}** a été validé par l'équipe {target_team_name}.*"
-        await self.item_channel.send(message)
-
-        # Confirmation message
-        await ctx.send("Gimmick validé !")
+            task = interactions.Task(self.edit_gimmick_message, DateTrigger(naive_local_dt))
+            task.start(gimmick_list)
+            await ctx.send("Le prochain gimmick sera révélé à minuit !")
 
     @interactions.slash_command(
         name="gimmick",
         description="Effectue une action sur les gimmicks",
         scopes=GUILD_IDS,
-        options=[
-            CAT_OPTION,
-            ZONE_OPTION,
-            POKEMON_OPTION
-        ],
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False,
-        sub_cmd_name="ajouter",
-        sub_cmd_description="Ajouter un nouveau gimmick de liste"
+        sub_cmd_name="rafraîchir",
+        sub_cmd_description="Un peu d'air frais, ça fait du bien :)"
     )
-    async def gimmick_add_command(self, ctx: interactions.SlashContext, category: str, zone: str, pokemon: str):
-        success = await self.load_team_info(ctx)
-        if not success:
+    async def gimmick_refresh_command(self, ctx: interactions.SlashContext):
+        # Load inventory
+        inventory = gimmick_manager.gimmick_list_inventory
+        if inventory is None:
+            await ctx.send("Erreur: Commande non implémentée.")
+            return
+        if not inventory.initialized:
+            await ctx.send("Erreur: L'inventaire n'est pas initialisé.")
             return
 
-        if category in self.gimmick_inventory.contents:
-            await ctx.send("Erreur. Cette catégorie a déjà un gimmick attribué.")
-            return
-
-        # Edit gimmick for current team
-        self.add_gimmick(category, zone, pokemon)
-
-        # Edit inventory message and send to item channel for current team
-        inv_msg = await self.item_channel.fetch_message(self.gimmick_inventory.message_id)
-        await inv_msg.edit(content=self.gimmick_inventory.format_discord(self.team.name))
-        message = (f"*Le gimmick de la région **{category}** a été ajouté.\n"
-                   f"La zone est* **{zone}**.")
-        await self.item_channel.send(message)
+        gimmick_channel = await self.bot.fetch_channel(GIMMICK_CHANNEL)
+        for entry in inventory.contents:
+            gimmick_list = inventory.contents[entry]
+            gimmick_message = await gimmick_channel.fetch_message(gimmick_list.message_id)
+            await gimmick_message.edit(content=gimmick_list.format_discord(),
+                                       file=gimmick_list.get_image_path(VGS_FOLDER))
 
         # Confirmation message
-        await ctx.send("Gimmick ajouté !")
-
-    def add_gimmick(self, cat: str, zone: str, pokemon: str):
-        # Update gimmick in list, add to inventory and save
-        gimmick_manager.add_gimmick(self.team.id, cat, zone, pokemon)
-        self.gimmick_inventory.add_gimmick(gimmick_manager.gimmicks[self.team.id], cat)
-        self.gimmick_inventory.save(TEAM_FOLDER, self.team.id)
+        await ctx.send("J'ai un gros glaçon sur ma tête !")
 
     @interactions.slash_command(
         name="gimmick",
         description="Effectue une action sur les gimmicks",
         scopes=GUILD_IDS,
         options=[
-            REGION_OPTION,
-            ZONE_OPTION,
-            POKEMON_OPTION
-        ],
-        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
-        dm_permission=False,
-        sub_cmd_name="éditer",
-        sub_cmd_description="Modifier un gimmick de liste"
-    )
-    async def gimmick_edit_command(self, ctx: interactions.SlashContext, cat: str, zone: str, pokemon: str):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        if self.gimmick_inventory.is_found(cat):
-            await ctx.send("Erreur. Impossible de modifier un gimmick déjà validé.")
-            return
-
-        if self.gimmick_inventory.is_unlock(cat):
-            warning_msg = await ctx.send("Attention ! Le Pokémon gimmick a déjà été révélé aux participants. Cette "
-                                         "opération va conserver le statut et indiquer le nouveau Pokémon.\n"
-                                         "Souhaitez-vous continuer ?")
-            reaction_manager = ReactionManager(warning_msg, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
-            reaction = await reaction_manager.run()
-            if reaction != REGIONAL_INDICATOR_O:
-                await ctx.send("Opération annulée.")
-                return
-
-        if self.gimmick_inventory.get_see_count(cat) > 0:
-            warning_msg = await ctx.send("Attention ! La zone gimmick a déjà été observée par d'autres équipes. Cette "
-                                         "opération va indiquer le changement aux équipes concernées.\n"
-                                         "Souhaitez-vous continuer ?")
-            reaction_manager = ReactionManager(warning_msg, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
-            reaction = await reaction_manager.run()
-            if reaction != REGIONAL_INDICATOR_O:
-                await ctx.send("Opération annulée.")
-                return
-
-            gimmick = Gimmick(cat, zone, pokemon)
-            # Edit other teams
-            for team in team_manager.teams:
-                if self.team.id == team:
-                    continue
-                gimmick_inv = team_manager.teams[team].inventory_manager.gimmick_inventory
-                if gimmick_inv.is_seen(self.team.name, cat):
-                    # Update and save
-                    gimmick_inv.see(self.team.name, gimmick_inv.get_seen(self.team.name, cat), state=False)
-                    gimmick_inv.see(self.team.name, gimmick)
-                    gimmick_inv.save(TEAM_FOLDER, team)
-
-                    # Send message
-                    item_channel = await self.bot.fetch_channel(team_manager.teams[team].item_channel_id)
-                    if item_channel is None:
-                        await ctx.send(f"Erreur: Salon objets non trouvé pour l'équipe {team}")
-                        return False
-                    inv_msg = await item_channel.fetch_message(gimmick_inv.message_id)
-                    await inv_msg.edit(content=gimmick_inv.format_discord(team_manager.teams[team].name))
-                    message = (f"*Le gimmick de la région* **{cat}** *observé chez l'équipe {self.team.name} a été "
-                               f"modifié.\nLa zone est désormais* **{zone}**.")
-                    await item_channel.send(message)
-
-        # Edit gimmick for current team
-        self.edit_gimmick(cat, zone, pokemon)
-
-        # Edit inventory message and send to item channel for current team
-        inv_msg = await self.item_channel.fetch_message(self.gimmick_inventory.message_id)
-        await inv_msg.edit(content=self.gimmick_inventory.format_discord(self.team.name))
-        message = (f"*Le gimmick de la région **{cat}** a été modifié.\n"
-                   f"La zone est désormais* **{zone}**.")
-        await self.item_channel.send(message)
-
-        # Confirmation message
-        await ctx.send("Gimmick modifié !")
-
-    def edit_gimmick(self, region: str, zone: str, pokemon: str, lock: bool = False):
-        # Update gimmick in list
-        gimmick_manager.edit_gimmick(self.team.id, region, zone, pokemon)
-        self.gimmick_inventory.update_gimmicks(gimmick_manager.gimmicks[self.team.id])
-        if lock:
-            self.gimmick_inventory.set_unlock(region, state=False)
-
-        # Save gimmick inventory
-        self.gimmick_inventory.save(TEAM_FOLDER, self.team.id)
-
-    @interactions.slash_command(
-        name="gimmick",
-        description="Effectue une action sur les gimmicks",
-        scopes=GUILD_IDS,
-        options=[
-            REGION_OPTION
+            # REGION_OPTION
         ],
         default_member_permissions=interactions.Permissions.ADMINISTRATOR,
         dm_permission=False,
@@ -350,121 +336,150 @@ class GimmickExtension(interactions.Extension):
         sub_cmd_description="Révéler le Pokémon gimmick de liste"
     )
     async def gimmick_reveal_command(self, ctx: interactions.SlashContext, cat: str):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
+        # TODO
+        raise NotImplementedError
+        # success = await self.load_team_info(ctx)
+        # if not success:
+        #     return
+        #
+        # if self.gimmick_inventory.is_unlock(cat):
+        #     await ctx.send("Erreur. Ce gimmick a déjà été révélé.")
+        #     return
+        #
+        # warning_msg = await ctx.send("Attention ! Le Pokémon gimmick sera révélé aux participants. Souhaitez-vous "
+        #                              "confirmer l'opération ?")
+        # reaction_manager = ReactionManager(warning_msg, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
+        # reaction = await reaction_manager.run()
+        # if reaction != REGIONAL_INDICATOR_O:
+        #     await ctx.send("Opération annulée.")
+        #     return
+        #
+        # # Unlock Pokémon in inventory and save
+        # self.gimmick_inventory.set_unlock(cat)
+        # self.gimmick_inventory.save(TEAM_FOLDER, self.team.id)
+        #
+        # # Edit inventory message and send to item channel
+        # inv_msg = await self.item_channel.fetch_message(self.gimmick_inventory.message_id)
+        # await inv_msg.edit(content=self.gimmick_inventory.format_discord(self.team.name))
+        # message = (f"*Le Pokémon gimmick de la zone **{self.gimmick_inventory.get_zone(cat)} ({cat})** a été révélé. "
+        #            f"Il s'agit de* **{self.gimmick_inventory.get_pokemon(cat)}**.")
+        # await self.item_channel.send(message)
+        #
+        # # Confirmation message
+        # await ctx.send("Gimmick révélé !")
 
-        if self.gimmick_inventory.is_unlock(cat):
-            await ctx.send("Erreur. Ce gimmick a déjà été révélé.")
-            return
+    # @interactions.slash_command(
+    #     name="gimmick",
+    #     description="Effectue une action sur les gimmicks",
+    #     scopes=GUILD_IDS,
+    #     options=[
+    #         # REGION_OPTION
+    #     ],
+    #     default_member_permissions=interactions.Permissions.ADMINISTRATOR,
+    #     dm_permission=False,
+    #     sub_cmd_name="cacher",
+    #     sub_cmd_description="Cache un gimmick de liste révélé. Ne devrait pas être utilisé en conditions réelles."
+    # )
+    # async def gimmick_hide_command(self, ctx: interactions.SlashContext, cat: str):
+    #     # TODO
+    #     raise NotImplementedError
+        # success = await self.load_team_info(ctx)
+        # if not success:
+        #     return
+        #
+        # if not self.gimmick_inventory.is_unlock(cat):
+        #     await ctx.send("Erreur. Ce gimmick est déjà caché.")
+        #     return
+        #
+        # # Hide Pokémon in inventory and save
+        # self.gimmick_inventory.set_unlock(cat, state=False)
+        # self.gimmick_inventory.save(TEAM_FOLDER, self.team.id)
+        #
+        # # Edit inventory message
+        # inv_msg = await self.item_channel.fetch_message(self.gimmick_inventory.message_id)
+        # await inv_msg.edit(content=self.gimmick_inventory.format_discord(self.team.name))
+        #
+        # # Confirmation message
+        # await ctx.send("Gimmick caché !")
 
-        warning_msg = await ctx.send("Attention ! Le Pokémon gimmick sera révélé aux participants. Souhaitez-vous "
-                                     "confirmer l'opération ?")
-        reaction_manager = ReactionManager(warning_msg, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
-        reaction = await reaction_manager.run()
-        if reaction != REGIONAL_INDICATOR_O:
-            await ctx.send("Opération annulée.")
-            return
-
-        # Unlock Pokémon in inventory and save
-        self.gimmick_inventory.set_unlock(cat)
-        self.gimmick_inventory.save(TEAM_FOLDER, self.team.id)
-
-        # Edit inventory message and send to item channel
-        inv_msg = await self.item_channel.fetch_message(self.gimmick_inventory.message_id)
-        await inv_msg.edit(content=self.gimmick_inventory.format_discord(self.team.name))
-        message = (f"*Le Pokémon gimmick de la zone **{self.gimmick_inventory.get_zone(cat)} ({cat})** a été révélé. "
-                   f"Il s'agit de* **{self.gimmick_inventory.get_pokemon(cat)}**.")
-        await self.item_channel.send(message)
-
-        # Confirmation message
-        await ctx.send("Gimmick révélé !")
-
-    @interactions.slash_command(
-        name="gimmick",
-        description="Effectue une action sur les gimmicks",
-        scopes=GUILD_IDS,
-        options=[
-            REGION_OPTION
-        ],
-        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
-        dm_permission=False,
-        sub_cmd_name="cacher",
-        sub_cmd_description="Cache un gimmick de liste révélé. Ne devrait pas être utilisé en conditions réelles."
-    )
-    async def gimmick_hide_command(self, ctx: interactions.SlashContext, cat: str):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        if not self.gimmick_inventory.is_unlock(cat):
-            await ctx.send("Erreur. Ce gimmick est déjà caché.")
-            return
-
-        # Hide Pokémon in inventory and save
-        self.gimmick_inventory.set_unlock(cat, state=False)
-        self.gimmick_inventory.save(TEAM_FOLDER, self.team.id)
-
-        # Edit inventory message
-        inv_msg = await self.item_channel.fetch_message(self.gimmick_inventory.message_id)
-        await inv_msg.edit(content=self.gimmick_inventory.format_discord(self.team.name))
-
-        # Confirmation message
-        await ctx.send("Gimmick caché !")
-
-    @interactions.slash_command(
-        name="gimmick",
-        description="Effectue une action sur les gimmicks",
-        scopes=GUILD_IDS,
-        options=[
-            TEAM_OPTION,
-            REGION_OPTION,
-            CANCEL_OPTION
-        ],
-        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
-        dm_permission=False,
-        sub_cmd_name="observer",
-        sub_cmd_description="Observer la zone d'un gimmick adverse. Ne devrait pas être utilisé en conditions réelles."
-    )
-    async def gimmick_see_command(self, ctx: interactions.SlashContext, team: str, cat: str, cancel: str = "non"):
-        success = await self.load_team_info(ctx)
-        if not success:
-            return
-
-        # Fetch target team channel
-        team_inst = team_manager.teams[team]
-        target_item_channel = await self.bot.fetch_channel(team_inst.item_channel_id)
-        if target_item_channel is None:
-            await ctx.send("Erreur: Salon objets non trouvé pour l'équipe visée.")
-            return False
-
-        # Check that gimmick is not seen already
-        should_cancel = cancel == "oui"
-        if should_cancel and not self.gimmick_inventory.is_seen(team_inst.name, cat):
-            await ctx.send("Erreur : Cette zone n'a pas été observée.")
-
-        if not should_cancel and self.gimmick_inventory.is_seen(team_inst.name, cat):
-            await ctx.send("Erreur : Cette zone a déjà été observée.")
-            return
-
-        # Add gimmick to seen gimmicks, update counter on target team
-        target_inv = team_inst.inventory_manager.gimmick_inventory
-        self.gimmick_inventory.see(team_inst.name, target_inv.gimmicks[cat], state=(not should_cancel))
-
-        if should_cancel:
-            target_inv.remove_see_count(cat)
-        else:
-            target_inv.add_see_count(cat)
-
-        # Edit messages
-        origin_inv_msg = await self.item_channel.fetch_message(self.gimmick_inventory.message_id)
-        await origin_inv_msg.edit(content=self.gimmick_inventory.format_discord(self.team.name))
-        target_inv_msg = await target_item_channel.fetch_message(target_inv.message_id)
-        await target_inv_msg.edit(content=target_inv.format_discord(team_inst.name))
-
-        # Save inventories
-        self.gimmick_inventory.save(TEAM_FOLDER, self.team.id)
-        target_inv.save(TEAM_FOLDER, team)
-
-        # Confirmation message
-        await ctx.send("Opération effectuée !")
+    # @interactions.slash_command(
+    #     name="gimmick",
+    #     description="Effectue une action sur les gimmicks",
+    #     scopes=GUILD_IDS,
+    #     options=[
+    #         LIST_OPTION
+    #     ],
+    #     default_member_permissions=interactions.Permissions.ADMINISTRATOR,
+    #     dm_permission=False,
+    #     sub_cmd_name="observer",
+    #     sub_cmd_description="Observer la zone d'un gimmick adverse. Ne devrait pas être utilisé en conditions réelles."
+    # )
+    # async def gimmick_see_command(self, ctx: interactions.SlashContext, list_name: str):
+    #     success = await self.load_team_info(ctx)
+    #     if not success:
+    #         return
+    #
+    #     if gimmick_manager.gimmick_list_inventory.get_found(list_name, step):
+    #         await ctx.send("Erreur: le gimmick a déjà été validé.")
+    #         return
+    #
+    #     if not gimmick_manager.gimmick_list_inventory.get_unlock(list_name, step):
+    #         warning_msg = await ctx.send("Attention ! Le Pokémon gimmick n'a jamais été révélé aux participants. "
+    #                                      "Cette opération va valider le gimmick et révéler le Pokémon.\n"
+    #                                      "Souhaitez-vous continuer ?")
+    #
+    #         reaction_manager = ReactionManager(warning_msg, [REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N])
+    #         reaction = await reaction_manager.run()
+    #         if reaction != REGIONAL_INDICATOR_O:
+    #             await ctx.send("Opération annulée.")
+    #             return
+    #
+    #     gimmick_manager.gimmick_list_inventory.set_found(list_name, step)
+    #     gimmick_manager.gimmick_list_inventory.set_unlock(list_name, step)  # ?
+    #     gimmick_manager.gimmick_list_inventory.save()
+    #
+    #     # TODO Edit message, update png
+    #
+    #     # TODO
+    #     raise NotImplementedError
+        # success = await self.load_team_info(ctx)
+        # if not success:
+        #     return
+        #
+        # # Fetch target team channel
+        # team_inst = team_manager.teams[team]
+        # target_item_channel = await self.bot.fetch_channel(team_inst.item_channel_id)
+        # if target_item_channel is None:
+        #     await ctx.send("Erreur: Salon objets non trouvé pour l'équipe visée.")
+        #     return False
+        #
+        # # Check that gimmick is not seen already
+        # should_cancel = cancel == "oui"
+        # if should_cancel and not self.gimmick_inventory.is_seen(team_inst.name, cat):
+        #     await ctx.send("Erreur : Cette zone n'a pas été observée.")
+        #
+        # if not should_cancel and self.gimmick_inventory.is_seen(team_inst.name, cat):
+        #     await ctx.send("Erreur : Cette zone a déjà été observée.")
+        #     return
+        #
+        # # Add gimmick to seen gimmicks, update counter on target team
+        # target_inv = team_inst.inventory_manager.gimmick_inventory
+        # self.gimmick_inventory.see(team_inst.name, target_inv.gimmicks[cat], state=(not should_cancel))
+        #
+        # if should_cancel:
+        #     target_inv.remove_see_count(cat)
+        # else:
+        #     target_inv.add_see_count(cat)
+        #
+        # # Edit messages
+        # origin_inv_msg = await self.item_channel.fetch_message(self.gimmick_inventory.message_id)
+        # await origin_inv_msg.edit(content=self.gimmick_inventory.format_discord(self.team.name))
+        # target_inv_msg = await target_item_channel.fetch_message(target_inv.message_id)
+        # await target_inv_msg.edit(content=target_inv.format_discord(team_inst.name))
+        #
+        # # Save inventories
+        # self.gimmick_inventory.save(TEAM_FOLDER, self.team.id)
+        # target_inv.save(TEAM_FOLDER, team)
+        #
+        # # Confirmation message
+        # await ctx.send("Opération effectuée !")

@@ -44,7 +44,7 @@ class GimmickItemCommand(UsableItemCommand):
                 await self.ctx.send("Opération annulée.")
                 return
 
-            gimmick = Gimmick(self.region, self.zone, self.pokemon)
+            # gimmick = Gimmick(self.pokemon, self.region,,,,
             # Edit other teams
             for team in team_manager.teams:
                 if self.team.id == team:

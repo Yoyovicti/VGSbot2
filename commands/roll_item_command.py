@@ -12,7 +12,7 @@ from manager.roll_manager import N_POS
 
 class RollItemCommand(ItemCommand):
     def __init__(self, bot: interactions.Client, ctx: interactions.SlashContext, method: str, position: int,
-                 qty: int = 1, charm: bool = False):
+                 qty: int = 1):
         super().__init__(bot, ctx)
 
         self.quest_inventory = None
@@ -21,7 +21,6 @@ class RollItemCommand(ItemCommand):
         self.method = roll_manager.method_drops[method]
         self.position = min(position, N_POS)
         self.qty = qty
-        self.charm = charm
 
     async def load_team_info(self) -> bool:
         if not await super().load_team_info():
@@ -32,10 +31,10 @@ class RollItemCommand(ItemCommand):
             await self.ctx.send("Erreur: La liste de quêtes n'est pas initialisée.")
             return False
 
-        self.mission_inventory = self.team.inventory_manager.mission_inventory
-        if not self.mission_inventory.initialized:
-            await self.ctx.send("Erreur: La liste de missions n'est pas initialisée.")
-            return False
+        # self.mission_inventory = self.team.inventory_manager.mission_inventory
+        # if not self.mission_inventory.initialized:
+        #     await self.ctx.send("Erreur: La liste de missions n'est pas initialisée.")
+        #     return False
 
         return True
 
@@ -47,24 +46,24 @@ class RollItemCommand(ItemCommand):
 
         global_save_item = False
         global_save_quest = False
-        global_save_mission = False
+        # global_save_mission = False
         for i in range(self.qty):
             send_channel = (i > 0)
-            save_item, save_quest, save_mission = await self.run_roll(send_channel=send_channel)
+            save_item, save_quest = await self.run_roll(send_channel=send_channel)
             if save_item:
                 global_save_item = True
             if save_quest:
                 global_save_quest = True
-            if save_mission:
-                global_save_mission = True
+            # if save_mission:
+            #     global_save_mission = True
 
         # Save inventory
         if global_save_item:
             self.item_inventory.save(TEAM_FOLDER, self.team.id)
         if global_save_quest:
             self.quest_inventory.save(TEAM_FOLDER, self.team.id)
-        if global_save_mission:
-            self.mission_inventory.save(TEAM_FOLDER, self.team.id)
+        # if global_save_mission:
+        #     self.mission_inventory.save(TEAM_FOLDER, self.team.id)
 
         # Edit inventory message and send to item channel
         inv_msg = await self.item_channel.fetch_message(self.item_inventory.message_id)
@@ -74,7 +73,7 @@ class RollItemCommand(ItemCommand):
         message = "*Aucun objet tiré*\n"
         save_item = False
         save_quest = False
-        save_mission = False
+        # save_mission = False
         item = ""
         quest = ""
         mission = ""
@@ -103,14 +102,14 @@ class RollItemCommand(ItemCommand):
             message += quest_message
 
         # Missions
-        if self.method.mission_drop > 0:
-            mission_message = "*Pas de mission tirée*\n"
-            mission_rng = random.Generator(random.MT19937())
-            if mission_rng.random() < self.method.mission_drop:
-                mission = self.roll_mission()
-                if mission != "":
-                    mission_message = f"{self.mission_inventory.missions[mission].format_discord()}\n"
-            message += mission_message
+        # if self.method.mission_drop > 0:
+        #     mission_message = "*Pas de mission tirée*\n"
+        #     mission_rng = random.Generator(random.MT19937())
+        #     if mission_rng.random() < self.method.mission_drop:
+        #         mission = self.roll_mission()
+        #         if mission != "":
+        #             mission_message = f"{self.mission_inventory.missions[mission].format_discord()}\n"
+        #     message += mission_message
 
         team_message = message
         boss_message = message
@@ -142,29 +141,15 @@ class RollItemCommand(ItemCommand):
             await command.run()
             save_quest = True
 
-        # Mission
-        if mission != "":
-            command = MissionCommand(self.bot, self.ctx, "add", mission, enable_save=False, use_slots=True)
-            await command.run()
-            save_mission = True
+        # # Mission
+        # if mission != "":
+        #     command = MissionCommand(self.bot, self.ctx, "add", mission, enable_save=False, use_slots=True)
+        #     await command.run()
+        #     save_mission = True
 
-        if enable_charm and self.charm:
-            charm_rng = random.Generator(random.MT19937())
-            if charm_rng.random() < self.method.charm_roll:
-                message = "*Le charme* **Cupidité irréversible** s'active, vous obtenez un tirage supplémentaire."
-                await self.item_channel.send(message)
-                await self.ctx.channel.send(message)
 
-                charm_save_item, charm_save_quest, charm_save_mission = await self.run_roll(enable_charm=False,
-                                                                                            send_channel=True)
-                if charm_save_item:
-                    save_item = True
-                if charm_save_quest:
-                    save_quest = True
-                if charm_save_mission:
-                    save_mission = True
 
-        return save_item, save_quest, save_mission
+        return save_item, save_quest
 
     def roll_item(self) -> str:
         pos_index = self.position - 1

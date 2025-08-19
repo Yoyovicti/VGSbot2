@@ -9,14 +9,13 @@ from manager.reaction_manager import ReactionManager
 
 class ClassicItemCommand(ItemCommand):
     def __init__(self, bot: interactions.Client, ctx: interactions.SlashContext, item: str, param: str, qty: int = 1,
-                 gold: bool = False, safe: bool = False, charm: bool = False):
+                 gold: bool = False, safe: bool = False):
         super().__init__(bot, ctx)
         self.item = item
         self.param = param
         self.qty = qty
         self.gold = gold
         self.safe = safe
-        self.charm = charm
 
     async def run(self):
         success = await self.load_team_info()
@@ -52,15 +51,9 @@ class ClassicItemCommand(ItemCommand):
         if self.item_inventory.quantity(self.item, self.gold, self.safe) < self.qty:
             return await self.run_remove_safe_checks()
 
-        # Charm
-        charm_count = 0
-        if self.charm and not self.gold:
-            rng = random.Generator(random.MT19937())
-            r = rng.random(self.qty)
-            charm_count = sum(r < 0.05)
 
         # Remove item and save inventory
-        self.item_inventory.remove(self.item, self.qty - charm_count, self.gold, self.safe)
+        self.item_inventory.remove(self.item, self.qty, self.gold, self.safe)
         self.item_inventory.save(TEAM_FOLDER, self.team.id)
 
         # Edit inventory message
@@ -70,9 +63,6 @@ class ClassicItemCommand(ItemCommand):
         # Send messages
         await self.item_channel.send(
             f"{item_manager.items[self.item].get_emoji(self.gold)} x{self.qty} retiré de l'inventaire !")
-        if charm_count > 0:
-            await self.item_channel.send(f"Le charme **Essaim Cueilleur** s'active, vous permettant de récupérer "
-                                         f"{item_manager.items[self.item].get_emoji()} x{charm_count}")
         await self.ctx.send("Inventaire mis à jour !")
 
         return True

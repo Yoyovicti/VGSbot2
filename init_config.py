@@ -18,15 +18,15 @@ GUILD_IDS_PATH = os.path.join(BOT_FOLDER, "guild_ids.txt")
 BOO_NAMES_PATH = os.path.join(BOT_FOLDER, "boo.txt")
 
 EXTENSIONS = [
-    # "extension.v8.gimmick_extension",
-    # "extension.v8.shassercouler_extension"
     "extension.inventory_extension",
     "extension.item_extension",
     "extension.gimmick_extension",
-    "extension.mission_extension",
     "extension.quest_extension",
     "extension.backup_extension",
 ]
+
+GIMMICK_CHANNEL = 529337222768492554
+# GIMMICK_CHANNEL = 1381265455787933766 #
 
 # Load Token
 TOKEN = ""
@@ -52,8 +52,7 @@ item_manager = ItemManager(VGS_FOLDER)
 mission_manager = MissionManager(VGS_FOLDER, item_manager.items)
 quest_manager = QuestManager(VGS_FOLDER, item_manager.items)
 gimmick_manager = GimmickManager(VGS_FOLDER)
-team_manager = TeamManager(VGS_FOLDER, TEAM_FOLDER, item_manager.items, mission_manager.missions, quest_manager.quests,
-                           gimmick_manager.gimmicks)
+team_manager = TeamManager(VGS_FOLDER, TEAM_FOLDER, item_manager.items, mission_manager.missions, quest_manager.quests)
 roll_manager = RollManager(VGS_FOLDER)
 
 

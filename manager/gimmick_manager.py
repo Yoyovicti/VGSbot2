@@ -1,43 +1,42 @@
 import json
 import os
 
-from manager import save_manager
-from definition.gimmick import Gimmick
+from definition.gimmick import Gimmick, GimmickList
+from inventory.gimmick_list_inventory import GimmickListInventory
 
 
 class GimmickManager:
     def __init__(self, base_path: str):
         self.base_path = base_path
         gimmick_path = os.path.join(base_path, "gimmicks.json")
+
         self.gimmicks = {}
         with open(gimmick_path, "r") as gimmick_file:
             data = json.load(gimmick_file)
 
             print("===== GimmickManager =====")
-            for team in data:
-                self.gimmicks[team] = {}
-                for region in data[team]:
-                    gimmick = Gimmick(region, data[team][region]["zone"], data[team][region]["pokemon"])
-                    self.gimmicks[team][region] = gimmick
-                print(f"Loaded gimmicks for team: {team}")
+            for gimmick_list in data:
+                self.gimmicks[gimmick_list] = {}
 
-    def add_gimmick(self, team: str, region: str, zone: str, pokemon: str):
-        self.edit_gimmick(team, region, zone, pokemon)
+                img_path = data[gimmick_list]["img_path"]
+                full_img_path = os.path.join(base_path, img_path)
+                self.gimmicks[gimmick_list]["img_path"] = full_img_path
 
-    def edit_gimmick(self, team: str, region: str, zone: str, pokemon: str):
-        # Edit gimmick
-        gimmick = Gimmick(region, zone, pokemon)
-        self.gimmicks[team][region] = gimmick
+                self.gimmicks[gimmick_list]["gimmicks"] = []
+                gimmicks = []
 
-        # Save data
-        data = {
-            team: {
-                region: {
-                    "zone": self.gimmicks[team][region].zone,
-                    "pokemon": self.gimmicks[team][region].pokemon
-                }
-                for region in self.gimmicks[team]
-            }
-            for team in self.gimmicks
-        }
-        save_manager.save(self.base_path, "gimmicks.json", json.dumps(data, indent=4))
+                for gimmick in data[gimmick_list]["gimmicks"]:
+                    pokemon = gimmick["pokemon"]
+                    version = gimmick["version"] if "version" in gimmick else ""
+                    method = gimmick["method"] if "method" in gimmick else ""
+                    zone = gimmick["zone"] if "zone" in gimmick else ""
+                    bonus = gimmick["bonus"]
+                    note = gimmick["note"]
+                    gimmick = Gimmick(pokemon, version, method, zone, bonus, note)
+                    gimmicks.append(gimmick)
+
+                self.gimmicks[gimmick_list] = GimmickList(gimmicks, img_path)
+                print(f"Loaded gimmick list: {gimmick_list}")
+
+        self.gimmick_list_inventory = GimmickListInventory(self.gimmicks)
+        self.gimmick_list_inventory.load(base_path)
