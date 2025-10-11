@@ -1,7 +1,7 @@
 import os
 from typing import Dict
 
-from definition.item import Item
+from definition.v10.item import Item
 from definition.mission import Mission
 from definition.quest import Quest
 from definition.team import Team

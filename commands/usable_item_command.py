@@ -1,14 +1,13 @@
-from typing import Dict, List
-
 import interactions
 from numpy import random
 
-from logic.boo import Boo
-from logic.cadoizo import Cadoizo
 from commands.item_command import ItemCommand
+from definition.v10.item import ItemFlags
 from init_config import item_manager, TEAM_FOLDER, ORBE_SUCCESS_RATE, team_manager, roll_manager, \
     GOLD_ORBE_SUCCESS_RATE, gimmick_manager
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS, CROSS_MARK
+from logic.boo import Boo
+from logic.cadoizo import Cadoizo
 from manager.reaction_manager import ReactionManager
 
 
@@ -254,7 +253,7 @@ class UsableItemCommand(ItemCommand):
         items = item_manager.items
         item_emojis = []
         for item in items:
-            if not items[item].stealable:
+            if not items[item].get_flag(ItemFlags.STEALABLE):
                 continue
 
             classic_qty = self.item_inventory.quantity(item)
@@ -313,7 +312,7 @@ class UsableItemCommand(ItemCommand):
         item_emojis = [
             item_manager.items[item].get_emoji(gold=True)
             for item in item_manager.items
-            if item_manager.items[item].transform_gold
+            if item_manager.items[item].get_flag(ItemFlags.TRANSFORM_GOLD)
         ]
         item_select_string = "Veuillez sélectionner l'objet doré à utiliser :"
         item_select_message = await self.item_channel.send(item_select_string)
@@ -439,7 +438,7 @@ class UsableItemCommand(ItemCommand):
                 elem_is_gold = elem["gold"] == 1
 
                 result_message += f"{item_manager.items[elem_item].get_emoji(elem_is_gold)} x{elem_qty}\n"
-                if elem_is_gold or not item_manager.items[elem_item].instant:
+                if elem_is_gold or not item_manager.items[elem_item].get_flag(ItemFlags.INSTANT):
                     self.item_inventory.add(elem_item, qty=elem_qty, gold=elem_is_gold)
                     should_save = True
                     continue
@@ -463,7 +462,7 @@ class UsableItemCommand(ItemCommand):
             return should_save
 
         # Add item to inventory
-        if not item_manager.items[choice].instant:
+        if not item_manager.items[choice].get_flag(ItemFlags.INSTANT):
             self.item_inventory.add(choice)
             should_save = True
 

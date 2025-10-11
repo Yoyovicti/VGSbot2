@@ -1,6 +1,7 @@
 import interactions
 
 from commands.item_command import ItemCommand
+from definition.v10.item import ItemFlags
 from init_config import TEAM_FOLDER, mission_manager, item_manager
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS, CROSS_MARK
 from manager.reaction_manager import ReactionManager
@@ -142,7 +143,7 @@ class MissionCommand(ItemCommand):
                 for item in item_reward:
                     for i in range(2):
                         if item_reward[item][i] > 0:
-                            if i == 1 or not item_manager.items[item].instant:
+                            if i == 1 or not item_manager.items[item].get_flag(ItemFlags.INSTANT):
                                 self.item_inventory.add(item, qty=item_reward[item][i], gold=(i == 1))
                 self.item_inventory.save(TEAM_FOLDER, self.team.id)
 

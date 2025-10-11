@@ -3,7 +3,7 @@ from typing import Dict
 
 from manager import save_manager
 from inventory.inventory import Inventory
-from definition.item import Item
+from definition.v10.item import Item, ItemFlags
 
 CLASSIC_ITEM = 0
 SAFE_ITEM = 1
@@ -93,7 +93,7 @@ class ItemInventory(Inventory):
         safe_string, gold_string = "", ""
 
         for item in self.items.values():
-            if self.contents[item.id][CLASSIC_ITEM] > 0 or not item.hidden:
+            if self.contents[item.id][CLASSIC_ITEM] > 0 or not item.get_flag(ItemFlags.HIDDEN):
                 string += f"{item.get_emoji()} x{self.contents[item.id][CLASSIC_ITEM]}\n"
             if self.contents[item.id][SAFE_ITEM] > 0:
                 safe_string += f"{item.get_emoji()} x{self.contents[item.id][SAFE_ITEM]}\n"

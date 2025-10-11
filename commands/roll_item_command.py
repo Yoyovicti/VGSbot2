@@ -6,7 +6,8 @@ from commands.item_command import ItemCommand
 from commands.mission_command import MissionCommand
 from commands.quest_command import QuestCommand
 from commands.usable_item_command import UsableItemCommand
-from init_config import TEAM_FOLDER, item_manager, roll_manager, team_manager, quest_manager
+from definition.v10.item import ItemFlags
+from init_config import TEAM_FOLDER, item_manager, roll_manager, team_manager
 from manager.roll_manager import N_POS
 
 
@@ -84,7 +85,7 @@ class RollItemCommand(ItemCommand):
             item = self.roll_item()
             message = f"*Objet tiré:* {item_manager.items[item].get_emoji()}\n"
 
-            if not item_manager.items[item].instant:
+            if not item_manager.items[item].get_flag(ItemFlags.INSTANT):
                 self.item_inventory.add(item)
                 save_item = True
 

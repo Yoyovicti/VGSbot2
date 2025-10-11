@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-from definition.item import Item
+from definition.v10.item import Item
 
 
 class ItemReward:

@@ -2,7 +2,7 @@ import json
 import os
 from typing import Dict
 
-from definition.item import Item
+from definition.v10.item import Item
 from definition.mission import Mission, Reward, ItemReward
 
 

@@ -6,7 +6,7 @@ from manager import save_manager
 from definition.gimmick import Gimmick
 from init_emoji import WHITE_CHECK_MARK, CROSS_MARK
 from inventory.inventory import Inventory
-from definition.item import Item
+from definition.v10.item import Item
 
 
 class GimmickInventory(Inventory):

@@ -4,6 +4,7 @@ from commands.clairvoyance_command import ClairvoyanceCommand
 from commands.classic_item_command import ClassicItemCommand
 from commands.roll_item_command import RollItemCommand
 from commands.usable_item_command import UsableItemCommand
+from definition.v10.item import ItemFlags
 from init_config import GUILD_IDS, item_manager, team_manager, roll_manager, gimmick_manager
 
 
@@ -28,7 +29,7 @@ class ItemExtension(interactions.Extension):
         choices=[
             interactions.SlashCommandChoice(name=item_manager.items[item].name, value=item)
             for item in item_manager.items
-            if item_manager.items[item].stealable
+            if item_manager.items[item].get_flag(ItemFlags.STEALABLE)
         ]
     )
     QTY_OPTION = interactions.SlashCommandOption(

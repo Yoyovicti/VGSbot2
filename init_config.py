@@ -1,6 +1,6 @@
 import os
 
-from manager.item_manager import ItemManager
+from manager.v10.item_manager import ItemManager
 from manager.gimmick_manager import GimmickManager
 from manager.mission_manager import MissionManager
 from manager.quest_manager import QuestManager
