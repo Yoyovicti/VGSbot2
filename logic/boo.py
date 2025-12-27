@@ -1,6 +1,7 @@
 from numpy import random
 
-from init_config import BOO_NAMES, item_manager
+from init_constants import BOO_NAMES
+from init_items import item_manager
 
 
 class Boo:

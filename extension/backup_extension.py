@@ -1,6 +1,6 @@
 import interactions
 
-from init_config import GUILD_IDS, DATA_FOLDER
+from init_constants import GUILD_IDS, DATA_FOLDER
 from manager import save_manager
 
 

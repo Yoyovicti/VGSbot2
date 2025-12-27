@@ -1,6 +1,7 @@
 import interactions
 
-from init_config import GUILD_IDS, TEAM_FOLDER, team_manager
+from init_constants import GUILD_IDS, TEAM_FOLDER
+from init_config import team_manager
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N
 from manager.reaction_manager import ReactionManager
 

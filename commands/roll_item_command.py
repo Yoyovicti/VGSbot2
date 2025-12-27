@@ -3,7 +3,6 @@ import numpy
 from numpy import random
 
 from commands.item_command import ItemCommand
-from commands.mission_command import MissionCommand
 from commands.quest_command import QuestCommand
 from commands.usable_item_command import UsableItemCommand
 from definition.v10.item import ItemFlags

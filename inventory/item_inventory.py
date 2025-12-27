@@ -1,9 +1,9 @@
 import os.path
-from typing import Dict
 
-from manager import save_manager
+from definition.v10.item import ItemFlags
+from init_items import item_manager
 from inventory.inventory import Inventory
-from definition.v10.item import Item, ItemFlags
+from manager import save_manager
 
 CLASSIC_ITEM = 0
 SAFE_ITEM = 1
@@ -11,13 +11,12 @@ GOLD_ITEM = 2
 
 
 class ItemInventory(Inventory):
-    def __init__(self, items: Dict[str, Item], message_id: str = "0"):
+    def __init__(self, message_id: str = "0"):
         super().__init__(message_id)
-        self.items = items
 
         self.contents = {
             item: [0, 0, 0]
-            for item in items
+            for item in item_manager.items
         }
 
     def init(self, message_id: str):
@@ -36,7 +35,7 @@ class ItemInventory(Inventory):
     def clear(self):
         self.contents = {
             item: [0, 0, 0]
-            for item in self.items
+            for item in item_manager.items
         }
 
     def load(self, base_path: str, team_name: str):
@@ -92,7 +91,7 @@ class ItemInventory(Inventory):
         string = f"__**Inventaire de l'équipe {team_name} :**__\n"
         safe_string, gold_string = "", ""
 
-        for item in self.items.values():
+        for item in item_manager.items.values():
             if self.contents[item.id][CLASSIC_ITEM] > 0 or not item.get_flag(ItemFlags.HIDDEN):
                 string += f"{item.get_emoji()} x{self.contents[item.id][CLASSIC_ITEM]}\n"
             if self.contents[item.id][SAFE_ITEM] > 0:

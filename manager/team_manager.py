@@ -11,8 +11,7 @@ from manager.inventory_manager import InventoryManager
 
 
 class TeamManager:
-    def __init__(self, vgs_path: str, team_path: str, items: Dict[str, Item], missions: Dict[str, Mission],
-                 quests: Dict[str, Quest]):
+    def __init__(self, vgs_path: str, team_path: str, quests: Dict[str, Quest]):
         boss_roles_path = os.path.join(vgs_path, "boss.txt")
         self.boss_roles = []
         with open(boss_roles_path, "r") as boss_file:
@@ -28,7 +27,7 @@ class TeamManager:
                 team_id, name, bot_channel_id, item_channel_id, shiny_channel_id, role_id = team.split()
                 name = name.replace("_", " ")
 
-                item_inventory = ItemInventory(items)
+                item_inventory = ItemInventory()
                 item_inventory.load(team_path, team_id)
 
                 # mission_inventory = MissionInventory(missions)

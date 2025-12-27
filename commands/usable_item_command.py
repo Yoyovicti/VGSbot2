@@ -2,9 +2,7 @@ import interactions
 from numpy import random
 
 from commands.item_command import ItemCommand
-from definition.v10.item import ItemFlags
-from init_config import item_manager, TEAM_FOLDER, ORBE_SUCCESS_RATE, team_manager, roll_manager, \
-    GOLD_ORBE_SUCCESS_RATE, gimmick_manager
+from init_config import item_manager, TEAM_FOLDER, team_manager, roll_manager
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS, CROSS_MARK
 from logic.boo import Boo
 from logic.cadoizo import Cadoizo
@@ -25,7 +23,7 @@ class UsableItemCommand(ItemCommand):
             "champi": self.run_champi_command
         }
 
-        self.gimmick_inventory = None
+        # self.gimmick_inventory = None
 
         self.param = param
         self.qty = qty
@@ -38,10 +36,10 @@ class UsableItemCommand(ItemCommand):
         if not await super().load_team_info():
             return False
 
-        self.gimmick_inventory = gimmick_manager.gimmick_list_inventory
-        if not self.gimmick_inventory.initialized:
-            await self.ctx.send("Erreur: La liste de gimmicks n'est pas initialisée.")
-            return False
+        # self.gimmick_inventory = gimmick_manager.gimmick_list_inventory
+        # if not self.gimmick_inventory.initialized:
+        #     await self.ctx.send("Erreur: La liste de gimmicks n'est pas initialisée.")
+        #     return False
 
         return True
 
@@ -346,13 +344,13 @@ class UsableItemCommand(ItemCommand):
             await self.run_boo(gold=True, remove_boo=False, cancel_option=False)
 
         # Process Clairvoyance
-        if target_item == "clairvoyance":
-            await self.run_clairvoyance(gold=True, remove_clairvoyance=False, cancel_option=False)
-
-            # Save and edit gimmick inventory
-            self.gimmick_inventory.save(TEAM_FOLDER, self.team.id)
-            gimmick_inv_msg = await self.item_channel.fetch_message(self.gimmick_inventory.message_id)
-            await gimmick_inv_msg.edit(content=self.gimmick_inventory.format_discord(self.team.name))
+        # if target_item == "clairvoyance":
+        #     await self.run_clairvoyance(gold=True, remove_clairvoyance=False, cancel_option=False)
+        #
+        #     # Save and edit gimmick inventory
+        #     self.gimmick_inventory.save(TEAM_FOLDER, self.team.id)
+        #     gimmick_inv_msg = await self.item_channel.fetch_message(self.gimmick_inventory.message_id)
+        #     await gimmick_inv_msg.edit(content=self.gimmick_inventory.format_discord(self.team.name))
 
         return True
 

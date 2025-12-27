@@ -1,7 +1,6 @@
 import interactions
 
 from commands.usable_item_command import UsableItemCommand
-from definition.gimmick import Gimmick
 from init_config import team_manager, TEAM_FOLDER, item_manager, gimmick_manager
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N
 from manager.reaction_manager import ReactionManager
@@ -53,7 +52,7 @@ class GimmickItemCommand(UsableItemCommand):
                 if gimmick_inv.is_seen(self.team.name, self.region):
                     # Update and save
                     gimmick_inv.see(self.team.name, gimmick_inv.get_seen(self.team.name, self.region), state=False)
-                    gimmick_inv.see(self.team.name, gimmick)
+                    # gimmick_inv.see(self.team.name, gimmick)
                     gimmick_inv.save(TEAM_FOLDER, team)
 
                     # Send message and edit gimmick inventory message

@@ -1,6 +1,6 @@
 import interactions
 
-from init_config import TOKEN, EXTENSIONS
+from init_constants import TOKEN, EXTENSIONS
 
 if __name__ == "__main__":
     print("===== Main =====")

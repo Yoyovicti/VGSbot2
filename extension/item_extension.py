@@ -5,7 +5,9 @@ from commands.classic_item_command import ClassicItemCommand
 from commands.roll_item_command import RollItemCommand
 from commands.usable_item_command import UsableItemCommand
 from definition.v10.item import ItemFlags
-from init_config import GUILD_IDS, item_manager, team_manager, roll_manager, gimmick_manager
+from init_constants import GUILD_IDS
+from init_config import team_manager, roll_manager, gimmick_manager
+from init_items import item_manager
 
 
 class ItemExtension(interactions.Extension):

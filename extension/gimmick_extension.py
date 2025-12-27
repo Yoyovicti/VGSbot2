@@ -4,7 +4,8 @@ import interactions
 import pytz
 from interactions import DateTrigger
 
-from init_config import GUILD_IDS, team_manager, gimmick_manager, GIMMICK_CHANNEL, VGS_FOLDER
+from init_config import team_manager, gimmick_manager, VGS_FOLDER
+from init_constants import GUILD_IDS
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N
 from manager.reaction_manager import ReactionManager
 

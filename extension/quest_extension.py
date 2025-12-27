@@ -1,7 +1,8 @@
 import interactions
 
 from commands.quest_command import QuestCommand
-from init_config import GUILD_IDS, quest_manager
+from init_config import quest_manager
+from init_constants import GUILD_IDS
 
 
 class QuestExtension(interactions.Extension):
