@@ -3,9 +3,8 @@ from init_items import item_manager
 from manager.gimmick_manager import GimmickManager
 from manager.mission_manager import MissionManager
 from manager.quest_manager import QuestManager
-from manager.roll_manager import RollManager
 from manager.team_manager import TeamManager
-from manager.v10.method_item_manager import MethodItemManager
+from manager.roll_manager import RollManager
 
 # Load Managers (Items, Missions, Gimmicks, Teams, Roll)
 mission_manager = MissionManager(VGS_FOLDER, item_manager.items)

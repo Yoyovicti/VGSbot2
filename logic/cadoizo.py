@@ -1,7 +1,7 @@
 import numpy as np
 from numpy import random
 
-from init_config import roll_manager, item_manager
+from init_config import item_manager, roll_manager
 from inventory.item_inventory import ItemInventory
 
 
@@ -28,7 +28,8 @@ class Cadoizo:
             valid_items.append(item)
 
         # Compute weights (fix weights when some items are not valid)
-        weights = [roll_manager.item_drops[item].cado for item in valid_items]
+        item_drops = roll_manager.get_item_drops("fo", True, 0)
+        weights = [item_drops[i].drop_factor for i in range(len(item_drops)) if item_drops[i].item_id in valid_items]
         probs = np.array(weights) * 1 / sum(weights)
 
         choices = list(rng.choice(valid_items, p=probs, size=self.n_items-1, replace=False))

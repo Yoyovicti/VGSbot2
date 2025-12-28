@@ -5,8 +5,8 @@ from commands.classic_item_command import ClassicItemCommand
 from commands.roll_item_command import RollItemCommand
 from commands.usable_item_command import UsableItemCommand
 from definition.v10.item import ItemFlags
+from init_config import team_manager, gimmick_manager, roll_manager
 from init_constants import GUILD_IDS
-from init_config import team_manager, roll_manager, gimmick_manager
 from init_items import item_manager
 
 
@@ -72,8 +72,8 @@ class ItemExtension(interactions.Extension):
         required=True,
         argument_name="method",
         choices=[
-            interactions.SlashCommandChoice(name=roll_manager.method_drops[method].name, value=method)
-            for method in roll_manager.method_drops
+            interactions.SlashCommandChoice(name=roll_manager.methods[method].name, value=method)
+            for method in roll_manager.methods
         ]
     )
 

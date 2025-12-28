@@ -6,7 +6,7 @@ from commands.item_command import ItemCommand
 from commands.quest_command import QuestCommand
 from commands.usable_item_command import UsableItemCommand
 from definition.v10.item import ItemFlags
-from init_config import TEAM_FOLDER, item_manager, roll_manager, team_manager
+from init_config import TEAM_FOLDER, item_manager, team_manager, roll_manager
 from manager.roll_manager import N_POS
 
 
@@ -18,7 +18,7 @@ class RollItemCommand(ItemCommand):
         self.quest_inventory = None
         self.mission_inventory = None
 
-        self.method = roll_manager.method_drops[method]
+        self.method = roll_manager.methods[method]
         self.position = min(position, N_POS)
         self.qty = qty
 
@@ -80,7 +80,7 @@ class RollItemCommand(ItemCommand):
 
         # Roll method
         meth_rng = random.Generator(random.MT19937())
-        if meth_rng.random() < self.method.item_drop:
+        if meth_rng.random() < self.method.drop_rates["item"]:
             item = self.roll_item()
             message = f"*Objet tiré:* {item_manager.items[item].get_emoji()}\n"
 
@@ -89,10 +89,10 @@ class RollItemCommand(ItemCommand):
                 save_item = True
 
         # Quests
-        if self.method.quest_drop > 0:
+        if self.method.drop_rates["quest"] > 0:
             quest_message = "*Pas de quête tirée*\n"
             quest_rng = random.Generator(random.MT19937())
-            if quest_rng.random() < self.method.quest_drop:
+            if quest_rng.random() < self.method.drop_rates["quest"]:
                 quest = self.roll_quest()
                 q_step = 0
                 if quest in self.quest_inventory.saved:
@@ -105,7 +105,7 @@ class RollItemCommand(ItemCommand):
         # if self.method.mission_drop > 0:
         #     mission_message = "*Pas de mission tirée*\n"
         #     mission_rng = random.Generator(random.MT19937())
-        #     if mission_rng.random() < self.method.mission_drop:
+        #     if mission_rng.random() < self.method.drop_rates["mission"]:
         #         mission = self.roll_mission()
         #         if mission != "":
         #             mission_message = f"{self.mission_inventory.missions[mission].format_discord()}\n"
@@ -164,7 +164,8 @@ class RollItemCommand(ItemCommand):
             valid_items.append(item)
 
         # Compute weights (fix weights when some items are not valid)
-        weights = [roll_manager.item_drops[item].drops[pos_index] for item in valid_items]
+        item_drops = roll_manager.get_item_drops("fo", False, pos_index)
+        weights = [item_drops[i].drop_factor for i in range(len(item_drops)) if item_drops[i].item_id in valid_items]
         probs = numpy.array(weights) * 1 / sum(weights)
 
         rng = random.Generator(random.MT19937())

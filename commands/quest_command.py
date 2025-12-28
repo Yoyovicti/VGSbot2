@@ -256,8 +256,11 @@ class QuestCommand(ItemCommand):
                     valid_items.append(item)
 
                 # Compute weights (fix weights to account for non-valid items)
-                weights = [roll_manager.item_drops[item].cado for item in valid_items]
-                probs = np.array(weights) * 1 / sum(weights)
+                # Weights for full odds, cadoizo, pos 1
+                item_drops = roll_manager.get_item_drops("fo", True, 0)
+                cado_weights = [item_drops[i].drop_factor for i in range(len(item_drops)) if item_drops[i].item_id in valid_items]
+                # weights = [roll_manager.item_drops[item].cado for item in valid_items]
+                probs = np.array(cado_weights) * 1 / sum(cado_weights)
 
                 rng = random.Generator(random.MT19937())
                 item = rng.choice(valid_items, p=probs)
