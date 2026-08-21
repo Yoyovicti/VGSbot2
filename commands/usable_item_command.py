@@ -5,7 +5,7 @@ from numpy import random
 
 from logic.boo import Boo
 from logic.cadoizo import Cadoizo
-from commands.item_command import ItemCommand
+from commands.item_command import ItemCommand, resolve_clone_saturn_conflict
 from init_config import item_manager, TEAM_FOLDER, ORBE_SUCCESS_RATE, team_manager, roll_manager, GOLD_ORBE_SUCCESS_RATE
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N, KEYCAP_NUMBERS, CROSS_MARK
 from manager.reaction_manager import ReactionManager
@@ -22,7 +22,8 @@ class UsableItemCommand(ItemCommand):
             "clairvoyance": self.run_clairvoyance_command,
             "ar": self.run_ar_command,
             "cadoizo": self.run_cadoizo_command,
-            "champi": self.run_champi_command
+            "champi": self.run_champi_command,
+            "mrsaturn": self.run_mrsaturn_command
         }
 
         self.gimmick_inventory = None
@@ -247,6 +248,10 @@ class UsableItemCommand(ItemCommand):
             target_msg += f"*, c'est vraiment gentil de votre part ! Allez bisous les nuls héhéhé...*"
             await self.item_channel.send(origin_msg)
             await target_item_channel.send(target_msg)
+
+            # Clone / MrSaturn cannot coexist in the same inventory
+            await resolve_clone_saturn_conflict(self.bot, self.team, self.item_inventory, self.item_channel,
+                                               sent_item)
 
     async def get_valid_boo_target_items(self):
         # Get item emojis with corresponding reference to name
@@ -656,6 +661,126 @@ class UsableItemCommand(ItemCommand):
 
         await self.ctx.send(f"{item_manager.items['champinocif'].get_emoji()} *Les points du shiny s'en vont vers "
                             f"l'équipe* **{team_manager.teams[target_team].name}**")
+
+    async def run_mrsaturn_command(self):
+        success = await self.load_team_info()
+        if not success:
+            return
+
+        # Verify quantity, ask to use safe items if needed
+        if self.item_inventory.quantity(self.param) + self.item_inventory.quantity(self.param, safe=True) < self.qty:
+            await self.ctx.send("Erreur: L'inventaire ne contient pas assez de cet objet.")
+            return
+
+        for _ in range(self.qty):
+            await self.run_mrsaturn()
+
+        # Edit inventory message
+        origin_inv_msg = await self.item_channel.fetch_message(self.item_inventory.message_id)
+        await origin_inv_msg.edit(content=self.item_inventory.format_discord(self.team.name))
+
+    async def run_mrsaturn(self):
+        # Select item to sacrifice among items currently owned by the team
+        valid_items = self.get_valid_sacrifice_items()
+        if not valid_items:
+            await self.ctx.send("Erreur: Aucun objet disponible à sacrifier.")
+            return
+
+        item_emojis = [item_manager.items[item].get_emoji() for item in valid_items]
+        item_select_message = await self.item_channel.send("Veuillez sélectionner l'objet à sacrifier :")
+        await self.ctx.send("*En attente du choix des participants...*")
+
+        item_reaction_manager = ReactionManager(item_select_message, [CROSS_MARK] + item_emojis)
+        selected_item_reaction = await item_reaction_manager.run()
+
+        if selected_item_reaction == CROSS_MARK:
+            await item_select_message.reply("Opération annulée.")
+            await self.ctx.send("Opération annulée.")
+            return
+
+        sacrifice_item = valid_items[item_emojis.index(selected_item_reaction)]
+
+        # Select target team
+        valid_teams = [team for team in team_manager.teams if team != self.team.id]
+        team_select_string = "Veuillez sélectionner l'équipe visée :\n\n"
+        for i in range(len(valid_teams)):
+            team_select_string += f"{KEYCAP_NUMBERS[i]} {team_manager.teams[valid_teams[i]].name}\n"
+        team_select_message = await self.item_channel.send(team_select_string)
+
+        team_reaction_manager = ReactionManager(team_select_message,
+                                                [CROSS_MARK] + KEYCAP_NUMBERS[:len(valid_teams)])
+        selected_team_reaction = await team_reaction_manager.run()
+
+        if selected_team_reaction == CROSS_MARK:
+            await team_select_message.reply("Opération annulée.")
+            await self.ctx.send("Opération annulée.")
+            return
+
+        target_team = team_manager.teams[valid_teams[KEYCAP_NUMBERS.index(selected_team_reaction)]]
+
+        target_item_channel = await self.bot.fetch_channel(target_team.item_channel_id)
+        if target_item_channel is None:
+            await team_select_message.reply("Opération annulée.")
+            await self.ctx.send("Erreur: Salon objets non trouvé pour la cible.")
+            return
+
+        # Remove sacrificed item and MrSaturn from the origin inventory, save
+        self.remove_owned(sacrifice_item)
+        self.remove_owned(self.param)
+        self.item_inventory.save(TEAM_FOLDER, self.team.id)
+
+        # Send MrSaturn to target inventory
+        target_inventory = target_team.inventory_manager.item_inventory
+        target_inventory.add(self.param)
+
+        # Clone / MrSaturn cannot coexist: if the target already has a clone, it gets expelled instead,
+        # and it protects the target's items from the sacrifice effect below
+        expelled_item = await resolve_clone_saturn_conflict(self.bot, target_team, target_inventory,
+                                                            target_item_channel, self.param)
+
+        # Remove up to 2 classic (non gold, non safe) copies of the sacrificed item from the target,
+        # unless the clone just protected them by getting expelled instead
+        removed_qty = 0
+        if not expelled_item:
+            removed_qty = min(2, target_inventory.quantity(sacrifice_item))
+            if removed_qty > 0:
+                target_inventory.remove(sacrifice_item, qty=removed_qty)
+
+        # Save target inventory, edit target inventory message
+        target_inventory.save(TEAM_FOLDER, target_team.id)
+        target_inv_msg = await target_item_channel.fetch_message(target_inventory.message_id)
+        await target_inv_msg.edit(content=target_inventory.format_discord(target_team.name))
+
+        # Send results
+        origin_msg = (f"{item_manager.items[self.param].get_emoji()} *a été envoyé à l'équipe* "
+                     f"**{target_team.name}** *en sacrifiant* {item_manager.items[sacrifice_item].get_emoji()} *!*")
+        target_msg = f"{item_manager.items[self.param].get_emoji()} *a atterri chez vous !"
+        if removed_qty > 0:
+            target_msg += f" Vous perdez* {item_manager.items[sacrifice_item].get_emoji()} x{removed_qty} *!*"
+        else:
+            target_msg += "*"
+        await self.item_channel.send(origin_msg)
+        await target_item_channel.send(target_msg)
+
+    def get_valid_sacrifice_items(self):
+        valid_items = []
+        for item in item_manager.items:
+            if item == self.param:
+                continue
+            qty = (self.item_inventory.quantity(item) + self.item_inventory.quantity(item, safe=True)
+                  + self.item_inventory.quantity(item, gold=True))
+            if qty > 0:
+                valid_items.append(item)
+        return valid_items
+
+    def remove_owned(self, item_id: str):
+        if self.item_inventory.quantity(item_id) > 0:
+            self.item_inventory.remove(item_id)
+            return
+        if self.item_inventory.quantity(item_id, safe=True) > 0:
+            self.item_inventory.remove(item_id, safe=True)
+            return
+        self.item_inventory.remove(item_id, gold=True)
 
     async def run_remove(self) -> bool:
         # Check quantity

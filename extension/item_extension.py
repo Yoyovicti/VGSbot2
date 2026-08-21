@@ -429,3 +429,17 @@ class ItemExtension(interactions.Extension):
         command = ClassicItemCommand(self.bot, ctx, "fleurdegel", param="remove", qty=qty, gold=(gold == "oui"),
                                      safe=(stealable == "non"))
         await command.run()
+
+    @interactions.slash_command(
+        name="mrsaturn",
+        description="Utilise un MrSaturn",
+        scopes=GUILD_IDS,
+        options=[
+            QTY_OPTION
+        ],
+        default_member_permissions=interactions.Permissions.ADMINISTRATOR,
+        dm_permission=False
+    )
+    async def mrsaturn_command(self, ctx: interactions.SlashContext, qty: int = 1):
+        command = UsableItemCommand(self.bot, ctx, param="mrsaturn", qty=qty)
+        await command.run()

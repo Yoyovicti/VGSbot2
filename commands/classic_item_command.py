@@ -1,6 +1,6 @@
 import interactions
 
-from commands.item_command import ItemCommand
+from commands.item_command import ItemCommand, resolve_clone_saturn_conflict
 from init_config import TEAM_FOLDER, item_manager
 from init_emoji import REGIONAL_INDICATOR_O, REGIONAL_INDICATOR_N
 from manager.reaction_manager import ReactionManager
@@ -40,6 +40,9 @@ class ClassicItemCommand(ItemCommand):
         if self.safe:
             message += " (non volable)"
         await self.item_channel.send(message + " ajouté à l'inventaire !")
+
+        # Clone / MrSaturn cannot coexist in the same inventory
+        await resolve_clone_saturn_conflict(self.bot, self.team, self.item_inventory, self.item_channel, self.item)
 
         # Confirmation message
         await self.ctx.send("Inventaire mis à jour !")
